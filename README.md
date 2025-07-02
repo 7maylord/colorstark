@@ -1,369 +1,191 @@
-# 🏗 Scaffold-Stark
+Color Bottle Matching Game
+The Color Bottle Matching Game is a decentralized, on-chain game built on StarkNet, where players match colored bottles to a target configuration to earn points. Players can connect their StarkNet wallet, set a display name, start a game, swap bottles to match the target, and compete on a global leaderboard. The game uses a Cairo smart contract for game logic and a Next.js frontend with TypeScript and Starknet-React for a seamless user experience.
+Features
 
-<h4 align="center">
-  <a href="https://docs.scaffoldstark.com/">Documentation</a> |
-  <a href="https://scaffoldstark.com/">Website</a> |
-  <a href="https://scaffold-stark-demo.vercel.app/debug">Demo</a>
-</h4>
+Wallet Integration: Connect with Argent X or Braavos to interact with the game on StarkNet.
+Player Profiles: Set a display name and track points earned from winning games.
+Gameplay: Start a game with 5 colored bottles (Red, Blue, Green, Yellow, Purple), swap bottles to match a target configuration, and earn 10 points for a complete match.
+Leaderboard: View all players’ names and points, sorted by highest score.
+Responsive UI: Built with Next.js and Tailwind CSS for a modern, user-friendly interface.
+Type Safety: Uses TypeScript for robust frontend development.
 
-🧪 An open-source, up-to-date toolkit for building decentralized applications (dapps) on Starknet blockchain. It's designed to make it easier for developers to create and deploy smart contracts and build user interfaces that interact with those contracts.
+Project Structure
+color-bottle-game/
+├── contracts/
+│   ├── src/
+│   │   └── color_bottle_game.cairo
+│   └── scarb.toml
+├── frontend/
+│   ├── app/
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   ├── components/
+│   │   ├── WalletConnector.tsx
+│   │   ├── PlayerInfo.tsx
+│   │   ├── GameControls.tsx
+│   │   ├── GameBoard.tsx
+│   │   ├── Leaderboard.tsx
+│   │   └── StarknetProvider.tsx
+│   ├── hooks/
+│   │   └── useStarknet.ts
+│   ├── utils/
+│   │   └── index.ts
+│   ├── next.config.js
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   ├── package.json
+│   └── tsconfig.json
+├── README.md
 
-⚙️ Built using NextJS, Starknet.js, Scarb, Starknet-React, Starknet Foundry.
 
-- ✅ **Contract Fast Reload**: Your frontend auto-adapts to your smart contracts as you deploy them.
-- 🪝 [**Custom hooks**](https://docs.scaffoldstark.com/hooks/): Collection of React hooks wrapper around [starknet-react](https://starknet-react.com/) to simplify interactions with smart contracts with typescript autocompletion.
-- 🧱 [**Components**](https://docs.scaffoldstark.com/components): Collection of common web3 components to quickly build your frontend.
-- 🔥 **Burner Wallet & Prefunded Account**: Quickly test your application with a burner wallet and prefunded accounts.
-- 🔐 **Integration with Wallet Providers**: Connect to different wallet providers and interact with Starknet network.
+contracts/: Contains the Cairo smart contract and Scarb configuration for building and deploying.
+frontend/: Contains the Next.js frontend with TypeScript, Starknet-React, and Tailwind CSS.
 
-![Debug Contracts tab](./packages/nextjs/public/debug-image.png)
+Prerequisites
 
-## 0. Requirements
+Node.js (v16 or later): Install Node.js
+Yarn: Install globally with npm install -g yarn.
+Starknet Wallet: Install Argent X or Braavos browser extension.
+Scarb: Cairo build toolchain (Install Scarb).
+Starknet Foundry (v0.38.2): For contract deployment (Install Starknet Foundry).
+Starknet Devnet (v0.2.4): For local testing (Install Devnet).
+Git: For cloning the repository.
 
-Before you begin, you need to install the following tools:
+Installation
+1. Clone the Repository
+git clone https://github.com/7mayord/colorstark.git
+cd colorstark
 
-- [Node (>= v18.17)](https://nodejs.org/en/download/)
-- Yarn ([v1](https://classic.yarnpkg.com/en/docs/install/) or [v2+](https://yarnpkg.com/getting-started/install))
-- [Git](https://git-scm.com/downloads)
-
-## 1. Install developer tools
-
-You can install the developer tools natively or use Dev Containers.
-
-### Option 1: Natively install developer tools
-
-#### 1.1 Starkup
-
-Tool for installing all the Starknet essentials for development. [Starkup](https://github.com/software-mansion/starkup) will install the latest stable versions of:
-
-- [Scarb](https://docs.swmansion.com/scarb/) - Cairo package manager and build toolchain
-- [Starknet Foundry](https://foundry-rs.github.io/starknet-foundry/index.html) - Development toolchain for testing on Starknet
-- [asdf](https://asdf-vm.com/guide/getting-started.html) - Version manager to easily switch between tool versions
-- [Cairo 1.0 extension](https://marketplace.visualstudio.com/items?itemName=starkware.cairo1) for VSCode - Syntax highlighting and language support
-
->Currently, [starknet-devnet](https://0xspaceshard.github.io/starknet-devnet/) is not supported by `starkup` and needs to be installed separately (see instructions below).
-
-To install `starkup`, run the following command:
-
-```sh
-curl --proto '=https' --tlsv1.2 -sSf https://sh.starkup.sh | sh
-```
-
-#### 1.2 Create your project
-
-Open a terminal and run the following command:
-
-```bash
-npx create-stark@latest
-cd my-dapp-example
+2. Install Frontend Dependencies
+Navigate to the frontend directory and install dependencies using Yarn:
+cd frontend
 yarn install
-```
 
-Now you have a new project with the basic structure.
+This installs:
 
-#### 1.3 Install Starknet Devnet using ASDF Fast Install
+@starknet-react/core, @starknet-react/chains, starknet for StarkNet integration.
+next, react, react-dom for the frontend.
+tailwindcss, postcss, autoprefixer for styling.
+TypeScript and related type definitions.
 
-- Install [asdf](https://asdf-vm.com/guide/getting-started.html) in case you don't have it installed yet. It allows you to manage the other dependencies with ease.
+3. Compile the Smart Contract
+Navigate to the contract directory and compile the Cairo contract using Scarb:
+cd contracts
+scarb build
 
-We are almost done, now we need to install `Starknet Devnet`. First let's register the Starknet Devnet plugin on `asdf`.
+This generates the compiled contract and ABI in target/dev/.
+4. Deploy the Smart Contract
+Option 1: Local Devnet
+Start a local StarkNet Devnet:
+starknet-devnet
 
-```bash
-asdf plugin add starknet-devnet
-```
+Declare and deploy the contract using Starknet Foundry’s sncast:
+# Declare the contract
+sncast --url http://localhost:5050 declare --contract-name ColorBottleGame
 
-Now open your new created project. Since we have the required dependencies listed on a `.tool-versions` file, simply running the below command on the root folder will install `starknet-devnet`(and other dependencies such as `scarb` and `starknet-foundry`) with the version SPECIFIED on the `.tool-versions` file (not necessarily the latest):
+Note the class hash returned.
+# Deploy the contract
+sncast --url http://localhost:5050 deploy --class-hash <CLASS_HASH>
 
-```bash
-asdf install
-```
+Note the contract address returned.
+Option 2: Sepolia Testnet
+Configure your StarkNet account:
+export STARKNET_ACCOUNT=~/.starknet_accounts/starknet_open_zeppelin_accounts.json
+export STARKNET_KEYSTORE=~/.starknet_accounts/starknet_open_zeppelin_key.json
 
-Now you are ready!!!. You can jump to [Quickstart 1](#quickstart-1-deploying-a-smart-contract-to-starknet-devnet) to start developing your dapp.
+Declare and deploy:
+sncast --url https://api.starknet.io/v0_7_1 declare --contract-name ColorBottleGame
+sncast --url https://api.starknet.io/v0_7_1 deploy --class-hash <CLASS_HASH>
 
-#### 1.4 Troubleshooting
+5. Update Contract Address
+Update the contractAddress in frontend/hooks/useStarknet.ts with the deployed contract address:
+const contractAddress = 'YOUR_DEPLOYED_CONTRACT_ADDRESS'; // e.g., 0x123...
 
-- If you run into version errors after using `starkup` or `asdf`, you can try to install the dependencies manually. Check the details below.
+6. Update Contract ABI
+After compiling the contract, copy the full ABI from contracts/target/dev/color_bottle_game_ColorBottleGame.contract_class.json and update the abi field in frontend/hooks/useStarknet.ts.
+Running the Application
 
-<details>
+Start the Frontend:
+cd frontend
+yarn dev
 
-#### Scarb version
+Open http://localhost:3000 in your browser.
 
-To ensure the proper functioning of scaffold-stark, your `Scarb` version must be `2.11.4`. To accomplish this, first check Scarb version:
+Connect Wallet:
 
-```sh
-scarb --version
-```
+Use Argent X or Braavos, set to the same network as your contract (e.g., Sepolia or Devnet).
+Click “Connect Wallet” to link your wallet.
 
-If your `Scarb` version is not `2.11.4`, you need to install it. If you already have installed `Scarb` via `starkup`, you can setup this specific version with the following command:
 
-```sh
-asdf install scarb 2.11.4 && asdf set scarb 2.11.4
-```
+Interact with the Game:
 
-Otherwise, you can install Scarb `2.11.4` following the [instructions](https://docs.swmansion.com/scarb/download.html#install-via-asdf).
+Set Name: Enter a name (e.g., “Alice”) and click “Set Name” to update your leaderboard profile.
+Start Game: Click “Start Game” to initialize a game with 5 colored bottles (Red, Blue, Green, Yellow, Purple) and a target configuration.
+Make Moves: Click two bottles to swap their positions, aiming to match the target. Track moves and correct bottles (e.g., “3/5”).
+Win Game: Match all 5 bottles to earn 10 points, automatically ending the game.
+End Game: Click “End Game” to manually terminate an active game.
+Leaderboard: View all players’ names and points, sorted by highest score.
 
-#### Starknet Foundry version
 
-To ensure the proper functioning of the tests on scaffold-stark, your `Starknet Foundry` version must be `0.44.0`. To accomplish this, first check your `Starknet Foundry` version:
 
-```sh
-snforge --version
-```
+Building for Production
 
-If your `Starknet Foundry` version is not `0.44.0`, you need to install it. If you already have installed `Starknet Foundry` via `starkup`, you can setup this specific version with the following command:
+Build the Frontend:
+cd frontend
+yarn build
 
-```sh
-asdf install starknet-foundry 0.44.0 && asdf set starknet-foundry 0.44.0
-```
 
-Otherwise, you can install Starknet Foundry `0.44.0` following the [instructions](https://foundry-rs.github.io/starknet-foundry/getting-started/installation.html#installation-via-asdf).
-
-#### Starknet-devnet version
-
-To ensure the proper functioning of scaffold-stark, your `starknet-devnet` version must be `0.4.1`. To accomplish this, first check your `starknet-devnet` version:
-
-```sh
-starknet-devnet --version
-```
-
-If your `starknet-devnet` version is not `0.4.1`, you need to install it.
-
-- Install starknet-devnet `0.4.1` via `asdf` ([instructions](https://github.com/gianalarcon/asdf-starknet-devnet/blob/main/README.md)).
-
-</details>
-
-### Option 2. Dev Containers
-
-#### 2.1 Install Docker Desktop
-
-As an alternative to installing the tools locally (Scarb, Starknet Foundry, Starknet Devnet), you can use Docker, this is the recommended option for `Windows` users. Here's what you need to do:
-
-1. Install [Docker Desktop](https://www.docker.com/get-started/)
-2. Install [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-3. Create a new project folder.
-
-- `npx create-stark@latest`
-- `cd my-dapp-example`
-
-4. Check your project folder contains a `devcontainer.json` file. This file is used to set up the environment:
-
-- The configuration uses the `starknetfoundation/starknet-dev:2.11.4` image.
-- This includes all required tools pre-installed, such as Scarb, Starknet Foundry, Starknet Devnet and other dependencies.
-
-#### 2.2 Getting Started with Docker Setup
-
-To start using the Docker-based setup:
-
-1. Open the project in **Visual Studio Code**.
-2. Select **"Reopen in Container"**.
-3. If you need to rebuild the container, open the Command Palette (**View -> Command Palette**) and choose:
-   - **Dev Containers: Rebuild and Reopen in Container**
-
-> Once inside the container, you can start working with all the tools and dependencies pre-configured.
-
-Now you are ready!!!
-
-## Compatible versions
-
-- Starknet-devnet - v0.4.1
-- Scarb - v2.11.4
-- Snforge - v0.44.0
-- Cairo - v2.11.4
-- Rpc - v0.8.0
-
-## Quickstart 1: Deploying a Smart Contract to Starknet-Devnet
-
-To get started with Scaffold-Stark, follow the steps below:
-
-1. Install the latest version of Scaffold-Stark
-
-```bash
-npx create-stark@latest
-cd my-dapp-example
-yarn install
-```
-
-2. Run a local network in the first terminal.
-
-```bash
-yarn chain
-```
-
-> To run a fork : `yarn chain --fork-network <URL> [--fork-block <BLOCK_NUMBER>]`
-
-This command starts a local Starknet network using Devnet. The network runs on your local machine and can be used for testing and development. You can customize the network configuration in `scaffold.config.ts` for your nextjs app.
-
-3. On a second terminal, deploy the sample contract:
-
-```bash
-yarn deploy
-```
-
-This command deploys a sample smart contract to the local network. The contract is located in `packages/snfoundry/contracts/src` and can be modified to suit your needs. The `yarn deploy` command uses the deploy script located in `packages/snfoundry/scripts-ts/deploy.ts` to deploy the contract to the network. You can also customize the deploy script.
-
-By default `Scaffold-Stark` takes the first prefunded account from `starknet-devnet` as a deployer address,
-
-4. On a third terminal, start your NextJS app:
-
-```bash
+Preview Locally:
 yarn start
-```
 
-Visit your app on: `http://localhost:3000`. You can interact with your smart contract using the `Debug Contracts` page.
 
-5. Check your environment variables. We have a `yarn postinstall` script that will create `.env` files based on the `.env.example` files provided. If the environment variables don't exist, you can manually create a `.env` file from the `.env.example` to get the app running!
+Deploy to Hosting (e.g., Vercel):
 
-> ⚠️ **IMPORTANT**: Never commit your private keys or sensitive environment variables to version control. The `.env` files are included in `.gitignore` by default, but always double-check before pushing your changes.
+Push the frontend directory to a Git repository.
+Import into Vercel and deploy, ensuring Yarn is selected as the package manager.
+Set environment variables (e.g., NEXT_PUBLIC_CONTRACT_ADDRESS) in Vercel if needed.
 
-## Quickstart 2: Deploying a Smart Contract to Sepolia Testnet
 
-<details>
 
-1. Make sure you already cloned this repo and installed dependencies.
+Testing
 
-2. Prepare your environment variables.
+Contract Testing: Write tests in contracts/src/tests/ using Starknet Foundry. Run tests with:
+cd contracts
+scarb test
 
-Find the `packages/snfoundry/.env` file and fill the env variables related to Sepolia testnet with your own wallet account contract address and private key. Find the `packages/nextjs/.env` file and fill the env variable related to Sepolia testnet rpc url.
 
-3. Change your default network to Sepolia testnet.
+Frontend Testing: Add unit tests with Jest in frontend. Install Jest:
+yarn add --dev jest @testing-library/react @testing-library/jest-dom
 
-Find the `packages/nextjs/scaffold.config.ts` file and change the `targetNetworks` to `[chains.sepolia]`.
+Configure Jest and write tests for components like GameBoard.tsx.
 
-![chall-0-scaffold-config](./packages/nextjs/public/scaffold-config.png)
+Testnet Testing: Use Sepolia testnet with STRK tokens from a faucet (e.g., Starknet Faucet). Verify transactions on Starkscan or Voyager.
 
-4. Get some testnet tokens.
 
-You will need to get some `STRK` Sepolia tokens to deploy your contract to Sepolia testnet.
+Troubleshooting
 
-> Some popular faucets are [Starknet Faucet](https://starknet-faucet.vercel.app/) and [Blastapi Starknet Sepolia STRK](https://blastapi.io/faucets/starknet-sepolia-strk)
+Wallet Issues: Ensure Argent X or Braavos is installed and set to the correct network. Check window.starknet in the browser console.
+Contract Errors: Verify the contract address and ABI in useStarknet.ts. Debug transactions on Starkscan/Voyager.
+Devnet Issues: Ensure starknet-devnet is running (v0.2.4). Use Docker if local setup fails.
+TypeScript Errors: Run yarn build to catch type issues early.
 
-4. Open a terminal, deploy the sample contract to Sepolia testnet:
+Future Enhancements
 
-```bash
-yarn deploy --network sepolia
-```
+Randomized Bottles: Integrate a StarkNet oracle for random bottle configurations.
+NFT Rewards: Add NFT-based rewards (e.g., unique bottle skins) via a separate contract.
+Improved UX: Add animations for bottle swaps and toast notifications for transaction status using react-toastify.
+Leaderboard Optimization: Use off-chain indexing (e.g., The Graph) for large-scale leaderboards.
+Mainnet Deployment: Deploy to StarkNet mainnet after thorough testing, updating StarknetProvider.tsx to use mainnet.
 
-5. On a second terminal, start your NextJS app:
+Resources
 
-```bash
-yarn start
-```
+Starknet-React Documentation
+Starknet Documentation
+Scarb Documentation
+Starknet Foundry Documentation
+Next.js Documentation
+Tailwind CSS Documentation
 
-Visit your app on: `http://localhost:3000`. You can interact with your smart contract using the `Debug Contracts` page.
-
-</details>
-
-## Setup RPC specific version
-
-<details>
-
-To ensure the proper functioning of the scaffold-stark with Testnet or Mainnet, your RPC version must be `0.8.0`. This repository contains `.env.example` files, where we provided the default RPC URL for the Starknet Testnet: `RPC_URL_SEPOLIA=https://starknet-sepolia.public.blastapi.io/rpc/v0_8`. Let's verify this RPC version is `0.8.x` by calling a `POST` request in an API platform like `Postman` or `Insommia` . Your API endpoint should be `https://starknet-sepolia.public.blastapi.io/rpc/v0_8` and the body should be:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "starknet_specVersion",
-  "id": 1
-}
-```
-
-You have to paste the endpoint and body in the API platform and click on the `Send` button. If the response is `0.8.x`, then you are good to go. Otherwise, you have to get the correct RPC URL endpoint.
-
-![rpc-version](./packages/nextjs/public/rpc-version.png)
-
-</details>
-
-## Network Configuration Centralization
-
-<details>
-
-By default, Network settings are centralized in `scaffold.config.ts` with all RPC URLs defined in the `rpcProviderUrl` object. We strongly recommend to use environment variables to configure the networks, otherwise the framework will choose a random provider for you.
-
-**How to Change Networks:**
-
-- Update the `targetNetworks` array in `scaffold.config.ts` (first network is the primary target)
-- Ensure each network has a corresponding RPC URL in the `rpcProviderUrl` object
-
-### Required Environment Variables
-
-Set these in your `.env` file:
-
-- `NEXT_PUBLIC_DEVNET_PROVIDER_URL`
-- `NEXT_PUBLIC_SEPOLIA_PROVIDER_URL`
-- `NEXT_PUBLIC_MAINNET_PROVIDER_URL`
-
-Configuration uses these variables with fallbacks:
-
-```typescript
-"devnet": process.env.NEXT_PUBLIC_DEVNET_PROVIDER_URL || process.env.NEXT_PUBLIC_PROVIDER_URL || "",
-"sepolia": process.env.NEXT_PUBLIC_SEPOLIA_PROVIDER_URL || process.env.NEXT_PUBLIC_PROVIDER_URL || "",
-"mainnet": process.env.NEXT_PUBLIC_MAINNET_PROVIDER_URL || process.env.NEXT_PUBLIC_PROVIDER_URL || ""
-```
-
-</details>
-
-## CLI Usage
-
-<details>
-Depending on your package manager, substitute the word `COMMAND` with the appropiate one from the list.
-
-```bash
-yarn COMMAND
-npm run COMMAND
-```
-
-This repo prefer yarn as package manager.
-
-Commands:
-
-| Command          | Description                                                                               |
-| ---------------- | ----------------------------------------------------------------------------------------- |
-| format:check     | (Read only) Batch checks for format inconsistencies for the nextjs and snfoundry codebase |
-| next:check-types | Compile typscript project                                                                 |
-| next:lint        | Runs next lint                                                                            |
-| prepare          | Install husky's git hooks                                                                 |
-| usage            | Show this text                                                                            |
-
-### CLI Smart Contracts
-
-| Command         | Description                                                                         |
-| --------------- | ----------------------------------------------------------------------------------- |
-| compile         | Compiles contracts.                                                                 |
-| test            | Runs snfoundry tests                                                                |
-| chain           | Starts the local blockchain network.                                                |
-| deploy          | Deploys contract to the configured network discarding previous deployments.         |
-| deploy:no-reset | Deploys contract to the configured network without discarding previous deployments. |
-| verify          | Verify Smart Contracts with Walnut                                                  |
-
-### CLI Frontend
-
-| Command     | Description                                  |
-| ----------- | -------------------------------------------- |
-| start       | Starts the frontend server                   |
-| test:nextjs | Runs the nextjs tests                        |
-| vercel      | Deploys app to vercel                        |
-| vercel:yolo | Force deploy app to vercel (ignoring errors) |
-
-## **What's next**
-
-- Edit your smart contract `YourContract.cairo` in `packages/snfoundry/contracts/src`
-- Edit your frontend homepage at `packages/nextjs/app/page.tsx`. For guidance on [routing](https://nextjs.org/docs/app/building-your-application/routing/defining-routes) and configuring [pages/layouts](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts) checkout the Next.js documentation.
-- Edit your deployment scripts in `packages/snfoundry/script-ts/deploy.ts`
-- Edit your smart contract tests in `packages/snfoundry/contracts/src/test`. To run tests use `yarn test`
-- You can write unit tests for your Next.js app! Run them with one the following scripts below.
-  - `yarn test:nextjs` to run regular tests with watch mode
-  - `yarn test:nextjs run` to run regular tests without watch mode
-  - `yarn test:nextjs run --coverage` to run regular tests without watch mode with coverage
-
-</details>
-
-## Documentation
-
-Visit our [docs](https://docs.scaffoldstark.com/) to learn how to start building with Scaffold-Stark.
-
-To know more about its features, check out our [website](https://scaffoldstark.com)
-
-## Contributing to Scaffold-Stark
-
-We welcome contributions to Scaffold-Stark!
-
-Please see [CONTRIBUTING.MD](https://github.com/Scaffold-Stark/scaffold-stark-2/blob/main/CONTRIBUTING.md) for more information and guidelines for contributing to Scaffold-Stark.
+License
+MIT License. See LICENSE for details.
