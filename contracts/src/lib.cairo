@@ -3,10 +3,11 @@ use core::array::Array;
 use core::pedersen::pedersen;
 
 
-mod types {
+pub mod types {
     use starknet::ContractAddress;
-    use core::serde::Serde;
-    use starknet::Store;
+    // use core::serde::Serde;
+    // use starknet::Store;
+
 
     #[derive(Copy, Drop, Serde, starknet::Store, PartialEq)]
     #[allow(starknet::store_no_default_variant)]
@@ -83,7 +84,7 @@ pub mod ColorStark {
         player: ContractAddress,
         moves: u8,
         is_active: bool,
-        seed: felt252,
+        seed: u256,
     }
 
     #[event]
@@ -120,16 +121,16 @@ pub mod ColorStark {
             assert(self.player_games.entry(player).read() == 0, 'Player already in game');
             let game_id = self.next_game_id.read();
 
-            let seed = pedersen(
+            let seed: u256 = pedersen(
                 pedersen(get_block_timestamp().into(), player.into()), game_id.try_into().unwrap(),
-            );
+            ).into();
 
             let colors = array![
                 Color::Red(0), Color::Blue(1), Color::Green(2), Color::Yellow(3), Color::Purple(4),
             ];
 
             let shuffled_starting_colors = self.shuffle_colors(colors.clone(), seed);
-            let shuffled_target_colors = self.shuffle_colors(colors, pedersen(seed, 'target'));
+            let shuffled_target_colors = self.shuffle_colors(colors, pedersen(seed.try_into().unwrap(), 'target').into());
 
             let game = Game {
                 player,
@@ -264,17 +265,17 @@ pub mod ColorStark {
             found
         }
 
-        fn shuffle_colors(self: @ContractState, colors: Array<Color>, seed: felt252) -> Array<Color> {
+        fn shuffle_colors(self: @ContractState, colors: Array<Color>, seed: u256) -> Array<Color> {
             let mut shuffled = array![];
             let mut remaining = colors;
             let mut current_seed = seed;
 
             while !remaining.is_empty() {
                 let len = remaining.len();
-                let index: u32 = (current_seed.into() % len.into()).try_into().unwrap();
+                let index: u32 = (current_seed % len.into()).try_into().unwrap();
                 shuffled.append(*remaining.at(index));
                 remaining = self.remove_at_index(remaining, index);
-                current_seed = pedersen(current_seed, index.into());
+                current_seed = pedersen(current_seed.try_into().unwrap(), index.into()).into();
             }
 
             shuffled
