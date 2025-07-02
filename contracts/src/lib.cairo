@@ -1,5 +1,32 @@
 use starknet::{ContractAddress, ClassHash};
-use core::array::{Array, array};
+use core::array::Array;
+use core::pedersen::pedersen;
+
+
+mod types {
+    use starknet::ContractAddress;
+    use core::serde::Serde;
+    use starknet::Store;
+
+    #[derive(Copy, Drop, Serde, starknet::Store, PartialEq)]
+    #[allow(starknet::store_no_default_variant)]
+    pub enum Color {
+        Red: u8,
+        Blue: u8,
+        Green: u8,
+        Yellow: u8,
+        Purple: u8,
+    }
+
+    #[derive(Copy, Drop, Serde, starknet::Store)]
+    pub struct PlayerData {
+        pub address: ContractAddress,
+        pub name: felt252,
+        pub points: u256,
+    }
+}
+
+use contracts::types::{Color, PlayerData};
 
 #[starknet::interface]
 pub trait IColorStark<TContractState> {
@@ -19,13 +46,13 @@ pub trait IColorStark<TContractState> {
 
 #[starknet::contract]
 pub mod ColorStark {
-    use core::array::ArrayTrait;
+    use starknet::{ContractAddress, get_caller_address, ClassHash, get_block_timestamp};
+    use core::array::{Array, ArrayTrait};
     use core::pedersen::pedersen;
-    use starknet::{ContractAddress, get_caller_address, ClassHash};
-    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess, Map, StoragePathEntry};
-
+    use starknet::storage::{StoragePointerWriteAccess, StoragePointerReadAccess, Map, StoragePathEntry};
     use openzeppelin::upgrades::upgradeable::UpgradeableComponent;
     use openzeppelin::access::ownable::OwnableComponent;
+    use super::{Color, PlayerData};
 
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -42,6 +69,8 @@ pub mod ColorStark {
         players: Map<u256, ContractAddress>,
         player_count: u256,
         next_game_id: u256,
+        bottles: Map<(u256, u8), Color>,
+        target: Map<(u256, u8), Color>,
 
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage,
@@ -52,27 +81,9 @@ pub mod ColorStark {
     #[derive(Copy, Drop, Serde, starknet::Store)]
     struct Game {
         player: ContractAddress,
-        bottles: Map<u8, Color>,
-        target: Map<u8, Color>,
         moves: u8,
         is_active: bool,
         seed: felt252,
-    }
-
-    #[derive(Copy, Drop, Serde, starknet::Store)]
-    enum Color {
-        Red: u8,
-        Blue: u8,
-        Green: u8,
-        Yellow: u8,
-        Purple: u8,
-    }
-
-    #[derive(Copy, Drop, Serde, starknet::Store)]
-    struct PlayerData {
-        address: ContractAddress,
-        name: felt252,
-        points: u256,
     }
 
     #[event]
@@ -86,6 +97,7 @@ pub mod ColorStark {
 
     #[constructor]
     fn constructor(ref self: ContractState) {
+        let owner = get_caller_address();
         self.ownable.initializer(owner);
         self.next_game_id.write(1);
         self.player_count.write(0);
@@ -95,117 +107,108 @@ pub mod ColorStark {
     impl ColorStarkImpl of super::IColorStark<ContractState> {
         fn set_player_name(ref self: ContractState, name: felt252) {
             let player = get_caller_address();
-            self.player_names.write(player, name);
+            self.player_names.entry(player).write(name);
             if !self.is_player_registered(player) {
                 let count = self.player_count.read();
-                self.players.write(count, player);
+                self.players.entry(count).write(player);
                 self.player_count.write(count + 1);
             }
         }
 
         fn start_game(ref self: ContractState) {
             let player = get_caller_address();
-            assert(self.player_games.read(player) == 0, 'Player already in game');
+            assert(self.player_games.entry(player).read() == 0, 'Player already in game');
             let game_id = self.next_game_id.read();
 
-            // Create randomness from block timestamp, player address, and game_id
             let seed = pedersen(
-                pedersen(starknet::get_block_timestamp().into(), player.into()), game_id,
+                pedersen(get_block_timestamp().into(), player.into()), game_id.try_into().unwrap(),
             );
 
             let colors = array![
                 Color::Red(0), Color::Blue(1), Color::Green(2), Color::Yellow(3), Color::Purple(4),
             ];
 
-            // Generate two different random arrangements
             let shuffled_starting_colors = self.shuffle_colors(colors.clone(), seed);
             let shuffled_target_colors = self.shuffle_colors(colors, pedersen(seed, 'target'));
 
-            let mut game = Game {
+            let game = Game {
                 player,
-                bottles: Map::default(),
-                target: Map::default(),
                 moves: 0,
                 is_active: true,
                 seed,
             };
 
-            // Set both arrangements as random
             let mut i: u8 = 0;
             while i < 5 {
-                game.bottles.write(i, *shuffled_starting_colors.at(i.into()));
-                game.target.write(i, *shuffled_target_colors.at(i.into()));
+                self.bottles.entry((game_id, i)).write(*shuffled_starting_colors.at(i.into()));
+                self.target.entry((game_id, i)).write(*shuffled_target_colors.at(i.into()));
                 i += 1;
             }
 
-            self.game_state.write(game_id, game);
-            self.player_games.write(player, game_id);
+            self.game_state.entry(game_id).write(game);
+            self.player_games.entry(player).write(game_id);
             self.next_game_id.write(game_id + 1);
         }
 
         fn make_move(ref self: ContractState, game_id: u256, bottle_from: u8, bottle_to: u8) {
             let player = get_caller_address();
-            let mut game = self.game_state.read(game_id);
+            let game = self.game_state.entry(game_id).read();
             assert(game.is_active, 'Game not active');
             assert(game.player == player, 'Not your game');
             assert(bottle_from < 5 && bottle_to < 5, 'Invalid bottle index');
             assert(bottle_from != bottle_to, 'Cannot swap same bottle');
 
-            // Perform the swap
-            let color_from = game.bottles.read(bottle_from);
-            let color_to = game.bottles.read(bottle_to);
-            game.bottles.write(bottle_from, color_to);
-            game.bottles.write(bottle_to, color_from);
+            let color_from = self.bottles.entry((game_id, bottle_from)).read();
+            let color_to = self.bottles.entry((game_id, bottle_to)).read();
+            self.bottles.entry((game_id, bottle_from)).write(color_to);
+            self.bottles.entry((game_id, bottle_to)).write(color_from);
+
+            let mut game = game;
             game.moves += 1;
+            self.game_state.entry(game_id).write(game);
 
-            // Update the game state
-            self.game_state.write(game_id, game);
-
-            // Check if puzzle is solved
             let correct = self.get_correct_bottles(game_id);
             if correct == 5 {
-                let current_points = self.player_points.read(player);
-                self.player_points.write(player, current_points + 10);
-
-                // End the game
+                let current_points = self.player_points.entry(player).read();
+                self.player_points.entry(player).write(current_points + 10);
+                let mut game = self.game_state.entry(game_id).read();
                 game.is_active = false;
-                self.game_state.write(game_id, game);
-                self.player_games.write(player, 0);
+                self.game_state.entry(game_id).write(game);
+                self.player_games.entry(player).write(0);
             }
         }
 
         fn end_game(ref self: ContractState, game_id: u256) {
             let player = get_caller_address();
-            let mut game = self.game_state.read(game_id);
+            let mut game = self.game_state.entry(game_id).read();
             assert(game.is_active, 'Game not active');
             assert(game.player == player, 'Not your game');
 
             game.is_active = false;
-            self.game_state.write(game_id, game);
-            self.player_games.write(player, 0);
+            self.game_state.entry(game_id).write(game);
+            self.player_games.entry(player).write(0);
         }
 
         fn get_game_state(
             self: @ContractState, game_id: u256,
         ) -> (ContractAddress, Array<Color>, Array<Color>, u8, bool) {
-            let game = self.game_state.read(game_id);
+            let game = self.game_state.entry(game_id).read();
             let mut bottles = array![];
             let mut target = array![];
             let mut i: u8 = 0;
             while i < 5 {
-                bottles.append(game.bottles.read(i));
-                target.append(game.target.read(i));
+                bottles.append(self.bottles.entry((game_id, i)).read());
+                target.append(self.target.entry((game_id, i)).read());
                 i += 1;
             }
             (game.player, bottles, target, game.moves, game.is_active)
         }
 
         fn get_correct_bottles(self: @ContractState, game_id: u256) -> u8 {
-            let game = self.game_state.read(game_id);
             let mut correct: u8 = 0;
             let mut i: u8 = 0;
             while i < 5 {
-                if game.bottles.read(i) == game.target.read(i) {
+                if self.bottles.entry((game_id, i)).read() == self.target.entry((game_id, i)).read() {
                     correct += 1;
                 }
                 i += 1;
@@ -214,11 +217,11 @@ pub mod ColorStark {
         }
 
         fn get_player_points(self: @ContractState, player: ContractAddress) -> u256 {
-            self.player_points.read(player)
+            self.player_points.entry(player).read()
         }
 
         fn get_player_name(self: @ContractState, player: ContractAddress) -> felt252 {
-            self.player_names.read(player)
+            self.player_names.entry(player).read()
         }
 
         fn get_all_player_points(self: @ContractState) -> Array<PlayerData> {
@@ -226,15 +229,14 @@ pub mod ColorStark {
             let count = self.player_count.read();
             let mut i: u256 = 0;
             while i < count {
-                let player = self.players.read(i);
-                result
-                    .append(
-                        PlayerData {
-                            address: player,
-                            name: self.player_names.read(player),
-                            points: self.player_points.read(player),
-                        },
-                    );
+                let player = self.players.entry(i).read();
+                result.append(
+                    PlayerData {
+                        address: player,
+                        name: self.player_names.entry(player).read(),
+                        points: self.player_points.entry(player).read(),
+                    },
+                );
                 i += 1;
             }
             result
@@ -253,7 +255,7 @@ pub mod ColorStark {
             let mut i: u256 = 0;
             let mut found = false;
             while i < count {
-                if self.players.read(i) == player {
+                if self.players.entry(i).read() == player {
                     found = true;
                     break;
                 }
@@ -262,15 +264,13 @@ pub mod ColorStark {
             found
         }
 
-        fn shuffle_colors(
-            self: @ContractState, colors: Array<Color>, seed: felt252,
-        ) -> Array<Color> {
+        fn shuffle_colors(self: @ContractState, colors: Array<Color>, seed: felt252) -> Array<Color> {
             let mut shuffled = array![];
             let mut remaining = colors;
             let mut current_seed = seed;
 
             while !remaining.is_empty() {
-                let len: u32 = remaining.len();
+                let len = remaining.len();
                 let index: u32 = (current_seed.into() % len.into()).try_into().unwrap();
                 shuffled.append(*remaining.at(index));
                 remaining = self.remove_at_index(remaining, index);
@@ -280,9 +280,7 @@ pub mod ColorStark {
             shuffled
         }
 
-        fn remove_at_index(
-            self: @ContractState, mut arr: Array<Color>, index: u32,
-        ) -> Array<Color> {
+        fn remove_at_index(self: @ContractState, mut arr: Array<Color>, index: u32) -> Array<Color> {
             let mut result = array![];
             let mut i: u32 = 0;
             while i < arr.len() {
