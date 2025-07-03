@@ -1,57 +1,69 @@
-import { ButtonHTMLAttributes, FC, ReactNode } from "react"
+import React from 'react';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  hideChevron?: boolean
-  selected?: boolean
-  leftIcon?: ReactNode
-  rightIcon?: ReactNode
-  responsiveChevron?: boolean
+// Simple classNames utility
+const classNames = (...classes: (string | undefined | null | false)[]): string => {
+  return classes.filter(Boolean).join(' ');
+};
+
+interface ButtonProps {
+  children: React.ReactNode;
+  onClick?: () => void;
+  className?: string;
+  disabled?: boolean;
+  loading?: boolean;
+  variant?: 'primary' | 'secondary' | 'accent' | 'ghost' | 'outline' | 'wallet' | 'game';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
+  type?: 'button' | 'submit' | 'reset';
 }
 
-const Button: FC<ButtonProps> = ({
-  onClick,
+export function Button({
   children,
-  style,
-  hideChevron,
-  selected,
-  leftIcon,
-  rightIcon,
-  responsiveChevron,
-  ...props
-}) => (
-  <button
-    style={{
-      ...style,
-    }}
-    {...props}
-    className={`${props.className} ${selected ? "selected" : ""} ${props.disabled ? "disabled" : "text-white md:hover:bg-charcoal md:bg-raisin-black "}`}
-    onClick={onClick}
-  >
-    <div className="flex items-center gap-2">
-      {leftIcon}
+  onClick,
+  className = '',
+  disabled = false,
+  loading = false,
+  variant = 'primary',
+  size = 'md',
+  type = 'button',
+}: ButtonProps) {
+  const baseClasses = 'btn';
+  
+  const variantClasses = {
+    primary: 'btn-primary',
+    secondary: 'btn-secondary',
+    accent: 'btn-accent',
+    ghost: 'btn-ghost',
+    outline: 'btn-outline',
+    wallet: 'btn-wallet',
+    game: 'btn-game',
+  };
+  
+  const sizeClasses = {
+    xs: 'btn-xs',
+    sm: 'btn-sm',
+    md: '',
+    lg: 'btn-lg',
+  };
+
+  const buttonClasses = classNames(
+    baseClasses,
+    variantClasses[variant],
+    sizeClasses[size],
+    loading && 'loading',
+    className
+  );
+
+  return (
+    <button
+      type={type}
+      className={buttonClasses}
+      onClick={onClick}
+      disabled={disabled || loading}
+    >
+      {loading && (
+        <span className="loading loading-spinner loading-sm mr-2"></span>
+      )}
       {children}
-    </div>
-
-    {(!hideChevron || rightIcon) && (
-      <svg
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className={`transform transition-transform duration-400 ease-in-out ${
-          selected ? "rotate-90" : ""
-        } ${responsiveChevron ? "md:hidden" : ""}`}
-      >
-        <polyline points="9 18 15 12 9 6" />
-      </svg>
-    )}
-
-    {rightIcon && <div>{rightIcon}</div>}
-  </button>
-)
-
-export { Button }
+    </button>
+  );
+}

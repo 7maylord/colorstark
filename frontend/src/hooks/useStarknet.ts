@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { connect, disconnect } from 'starknetkit';
+import { useAccount } from '@starknet-react/core';
 import { Provider, Contract, uint256, shortString } from 'starknet';
 import { colorMap } from '../utils';
 import colorStarkAbi from '../abi/color_stark.json';
@@ -22,7 +22,7 @@ export interface PlayerData {
 }
 
 export function useStarknet() {
-  const [account, setAccount] = useState<any | null>(null);
+  const { account, address } = useAccount();
   const [contract, setContract] = useState<Contract | null>(null);
   const [gameId, setGameId] = useState<string | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -30,89 +30,41 @@ export function useStarknet() {
   const [playerPoints, setPlayerPoints] = useState('0');
   const [playerName, setPlayerName] = useState('');
   const [leaderboard, setLeaderboard] = useState<PlayerData[]>([]);
-  const [connecting, setConnecting] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  async function connectWallet() {
-    setConnecting(true);
-    setConnectionError(null);
-    try {
-      const { wallet } = await connect({
-        modalMode: 'canAsk',
-        webWalletUrl: 'https://web.argent.xyz',
-      });
-      if (wallet && (wallet as any).account && (wallet as any).account.address) {
-        setAccount(wallet);
+  // Create contract when account is connected
+  useEffect(() => {
+    if (account && contractAddress) {
+      try {
         const starknetContract = new Contract(
-          colorStarkAbi,
+          colorStarkAbi as any,
           contractAddress,
-          wallet as any // wallet as AccountInterface
+          account
         );
         setContract(starknetContract);
-      } else {
-        setConnectionError('Wallet connection failed.');
+      } catch (error) {
+        console.error('Error creating contract:', error);
+        setContract(null);
       }
-    } catch (error: any) {
-      setConnectionError('Error connecting wallet: ' + (error?.message || error));
-      console.error('Error connecting wallet:', error);
-    } finally {
-      setConnecting(false);
-    }
-  }
-
-  useEffect(() => {
-    async function autoConnect() {
-      setConnecting(true);
-      setConnectionError(null);
-      try {
-        const { wallet } = await connect({ modalMode: 'neverAsk', webWalletUrl: 'https://web.argent.xyz' });
-        if (wallet && (wallet as any).account && (wallet as any).account.address) {
-          setAccount(wallet);
-          const starknetContract = new Contract(
-            colorStarkAbi,
-            contractAddress,
-            wallet as any // wallet as AccountInterface
-          );
-          setContract(starknetContract);
-        }
-      } catch (error: any) {
-        setConnectionError('Error auto-connecting wallet: ' + (error?.message || error));
-      } finally {
-        setConnecting(false);
-      }
-    }
-    autoConnect();
-  }, []);
-
-  useEffect(() => {
-    if (!account || !account.provider) return;
-    const provider = account.provider;
-    if (provider.on) {
-      const handleAccountsChanged = (accounts: string[]) => {
-        if (!accounts || accounts.length === 0) {
-          setAccount(null);
-          setContract(null);
-        } else {
-          setAccount((prev: any) => ({ ...prev, account: { ...prev.account, address: accounts[0] } }));
-        }
-      };
-      provider.on('accountsChanged', handleAccountsChanged);
-      return () => {
-        provider.removeListener('accountsChanged', handleAccountsChanged);
-      };
+    } else {
+      setContract(null);
     }
   }, [account]);
 
   async function updatePlayerData(account: any) {
-    if (account && contract) {
+    if (account && contract && address) {
       try {
-        const pointsRes = await contract.call('get_player_points', [uint256.bnToUint256(BigInt((account as any).account.address))]);
-        setPlayerPoints(uint256.uint256ToBN(pointsRes as any).toString());
-        const nameRes = await contract.call('get_player_name', [(account as any).account.address]);
+        const pointsRes = await contract.call('get_player_points', [address]);
+        const points = Array.isArray(pointsRes) ? pointsRes[0] : pointsRes;
+        setPlayerPoints(uint256.uint256ToBN(points as any).toString());
+        
+        const nameRes = await contract.call('get_player_name', [address]);
         setPlayerName(nameRes ? shortString.decodeShortString(String(nameRes)) : 'Unnamed');
+        
         await updateLeaderboard();
       } catch (error) {
         console.error('Error updating player data:', error);
+        setPlayerPoints('0');
+        setPlayerName('Unnamed');
       }
     }
   }
@@ -121,14 +73,16 @@ export function useStarknet() {
     if (contract) {
       try {
         const playersRes = await contract.call('get_all_player_points', []);
-        const formatted: PlayerData[] = Array.isArray(playersRes) ? playersRes.map((player: any) => ({
-          address: player.address,
-          name: player.name ? shortString.decodeShortString(player.name) : 'Unnamed',
-          points: uint256.uint256ToBN(player.points).toString(),
-        })) : [];
+        const playersArray = Array.isArray(playersRes) ? playersRes : [];
+        const formatted: PlayerData[] = playersArray.map((player: any) => ({
+          address: player.address || '',
+          name: player.name ? shortString.decodeShortString(String(player.name)) : 'Unnamed',
+          points: player.points ? uint256.uint256ToBN(player.points).toString() : '0',
+        }));
         setLeaderboard(formatted.sort((a, b) => Number(b.points) - Number(a.points)));
       } catch (error) {
         console.error('Error updating leaderboard:', error);
+        setLeaderboard([]);
       }
     }
   }
@@ -136,10 +90,15 @@ export function useStarknet() {
   async function updateGameState(gameId: string | null) {
     if (contract && gameId) {
       try {
-        const state: any = await contract.call('get_game_state', [uint256.bnToUint256(BigInt(gameId))]);
-        if (!Array.isArray(state) || state.length < 5) throw new Error('Invalid game state');
+        const gameIdUint256 = uint256.bnToUint256(BigInt(gameId));
+        const state: any = await contract.call('get_game_state', [gameIdUint256]);
+        
+        if (!Array.isArray(state) || state.length < 5) {
+          throw new Error('Invalid game state response');
+        }
+        
         setGameState({
-          player: state[0],
+          player: String(state[0]),
           bottles: Array.isArray(state[1]) ? state[1].map((color: any) => {
             if (color.Red !== undefined) return 0;
             if (color.Blue !== undefined) return 1;
@@ -156,11 +115,12 @@ export function useStarknet() {
             if (color.Purple !== undefined) return 4;
             return 0;
           }) : [],
-          moves: Number(state[3]),
+          moves: Number(state[3]) || 0,
           isActive: state[4]?.True !== undefined,
         });
-        const correct = await contract.call('get_correct_bottles', [uint256.bnToUint256(BigInt(gameId))]);
-        setCorrectBottles(Number(correct));
+        
+        const correct = await contract.call('get_correct_bottles', [gameIdUint256]);
+        setCorrectBottles(Number(correct) || 0);
       } catch (error) {
         console.error('Error updating game state:', error);
         setGameState(null);
@@ -173,36 +133,52 @@ export function useStarknet() {
   }
 
   async function checkActiveGame() {
-    if (account && contract) {
+    if (account && contract && address) {
       try {
         let latestGameId = gameId ? BigInt(gameId) : BigInt(1);
         let found = false;
+        
+        // Check for active games
         for (let i = 0; i < 10; i++) {
-          const testGameId = (latestGameId + BigInt(i)).toString();
-          const state: any = await contract.call('get_game_state', [uint256.bnToUint256(BigInt(testGameId))]);
-          if (Array.isArray(state) && state[4]?.True !== undefined && state[0] === (account as any).account.address) {
-            setGameId(testGameId);
-            await updateGameState(testGameId);
-            found = true;
-            break;
+          try {
+            const testGameId = (latestGameId + BigInt(i)).toString();
+            const gameIdUint256 = uint256.bnToUint256(BigInt(testGameId));
+            const state: any = await contract.call('get_game_state', [gameIdUint256]);
+            
+            if (Array.isArray(state) && 
+                state.length >= 5 && 
+                state[4]?.True !== undefined && 
+                String(state[0]) === address) {
+              setGameId(testGameId);
+              await updateGameState(testGameId);
+              found = true;
+              break;
+            }
+          } catch (gameError) {
+            // Game doesn't exist or other error, continue checking
+            console.log(`Game ${latestGameId + BigInt(i)} not found or error:`, gameError);
+            continue;
           }
         }
+        
         if (!found) {
           setGameId(null);
           setGameState(null);
         }
       } catch (error) {
         console.error('Error checking active game:', error);
+        setGameId(null);
+        setGameState(null);
       }
     }
   }
 
   useEffect(() => {
-    if (account && contract) {
+    if (account && contract && address) {
       updatePlayerData(account);
       checkActiveGame();
     }
-  }, [account, contract]);
+  }, [account, contract, address]);
 
   return {
     account,
@@ -215,11 +191,8 @@ export function useStarknet() {
     playerPoints,
     playerName,
     leaderboard,
-    connectWallet,
     updatePlayerData,
     updateLeaderboard,
     updateGameState,
-    connecting,
-    connectionError,
   };
 }
