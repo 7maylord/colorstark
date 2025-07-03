@@ -1,32 +1,20 @@
 'use client';
 
 import { useAccount } from '@starknet-react/core';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useStarknet } from '@/hooks/useStarknet';
-import GameControls from '@/components/GameControls';
-import GameBoard from '@/components/GameBoard';
-import PlayerInfo from '@/components/PlayerInfo';
 import SetNameModal from '../components/SetNameModal';
 import GameIntro from '@/components/GameIntro';
 
 export default function Home() {
   const { address } = useAccount();
+  const router = useRouter();
   const { 
-    account, 
     contract, 
-    gameId, 
-    setGameId, 
-    gameState, 
-    setGameState, 
-    correctBottles, 
-    playerPoints, 
-    playerName, 
-    updatePlayerData, 
-    updateLeaderboard, 
-    updateGameState 
+    playerName
   } = useStarknet();
   const [showSetNameModal, setShowSetNameModal] = useState(false);
-  const [gameStarted, setGameStarted] = useState(false);
   const [isLoadingPlayer, setIsLoadingPlayer] = useState(false);
 
   const handleStartGame = async () => {
@@ -46,7 +34,8 @@ export default function Home() {
         if (!playerName || playerName === 'Unnamed') {
           setShowSetNameModal(true);
         } else {
-          setGameStarted(true);
+          // Redirect to game page
+          router.push('/game');
         }
       }
     } catch (error) {
@@ -59,98 +48,50 @@ export default function Home() {
 
   const handleNameSet = () => {
     setShowSetNameModal(false);
-    setGameStarted(true);
+    // Redirect to game page after name is set
+    router.push('/game');
   };
-
-  // If game is started and wallet is connected, show the game interface
-  if (gameStarted && address && account) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900">
-        <div className="container mx-auto px-4 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Game Area */}
-            <div className="lg:col-span-3 space-y-6">
-              <PlayerInfo 
-                account={account}
-                contract={contract}
-                playerName={playerName}
-                playerPoints={playerPoints}
-                updatePlayerData={updatePlayerData}
-                updateLeaderboard={updateLeaderboard}
-              />
-              {gameState && (
-                <GameBoard
-                  account={account}
-                  contract={contract}
-                  gameId={gameId}
-                  gameState={gameState}
-                  correctBottles={correctBottles}
-                  updateGameState={updateGameState}
-                  updatePlayerData={updatePlayerData}
-                />
-              )}
-              <GameControls
-                account={account}
-                contract={contract}
-                gameState={gameState}
-                gameId={gameId}
-                setGameId={setGameId}
-                updateGameState={updateGameState}
-              />
-            </div>
-            
-            {/* Sidebar */}
-            <div className="lg:col-span-1">
-              {/* Game stats could go here in the future */}
-              <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6">
-                <h3 className="text-xl font-bold text-white mb-4">Game Stats</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Your Score</span>
-                    <span className="text-white font-bold">{playerPoints}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Games Played</span>
-                    <span className="text-white font-bold">-</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Win Rate</span>
-                    <span className="text-white font-bold">-</span>
-                  </div>
-                </div>
-                <div className="mt-6 pt-4 border-t border-white/10">
-                  <p className="text-gray-400 text-sm text-center">
-                    Check the full leaderboard in the navbar!
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Landing page with gaming UI
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 relative overflow-hidden">
       {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
         {/* Floating Bottles Animation */}
         <div className="absolute top-20 left-10 animate-float">
-          <div className="w-8 h-12 bg-red-500 rounded-full opacity-20 blur-sm"></div>
+          <div className="w-6 h-16 bg-gradient-to-b from-red-400 to-red-600 rounded-t-full rounded-b-lg opacity-30 shadow-lg">
+            <div className="w-4 h-4 bg-red-300 rounded-full mx-auto mt-1 opacity-80"></div>
+          </div>
         </div>
         <div className="absolute top-40 right-20 animate-float-delayed">
-          <div className="w-6 h-10 bg-blue-500 rounded-full opacity-20 blur-sm"></div>
+          <div className="w-5 h-14 bg-gradient-to-b from-blue-400 to-blue-600 rounded-t-full rounded-b-lg opacity-30 shadow-lg">
+            <div className="w-3 h-3 bg-blue-300 rounded-full mx-auto mt-1 opacity-80"></div>
+          </div>
         </div>
         <div className="absolute bottom-40 left-20 animate-float-slow">
-          <div className="w-7 h-11 bg-green-500 rounded-full opacity-20 blur-sm"></div>
+          <div className="w-6 h-15 bg-gradient-to-b from-green-400 to-green-600 rounded-t-full rounded-b-lg opacity-30 shadow-lg">
+            <div className="w-4 h-4 bg-green-300 rounded-full mx-auto mt-1 opacity-80"></div>
+          </div>
         </div>
         <div className="absolute bottom-20 right-10 animate-float">
-          <div className="w-5 h-9 bg-yellow-500 rounded-full opacity-20 blur-sm"></div>
+          <div className="w-5 h-13 bg-gradient-to-b from-yellow-400 to-yellow-600 rounded-t-full rounded-b-lg opacity-30 shadow-lg">
+            <div className="w-3 h-3 bg-yellow-300 rounded-full mx-auto mt-1 opacity-80"></div>
+          </div>
         </div>
         <div className="absolute top-60 left-1/3 animate-float-delayed">
-          <div className="w-6 h-10 bg-purple-500 rounded-full opacity-20 blur-sm"></div>
+          <div className="w-6 h-16 bg-gradient-to-b from-purple-400 to-purple-600 rounded-t-full rounded-b-lg opacity-30 shadow-lg">
+            <div className="w-4 h-4 bg-purple-300 rounded-full mx-auto mt-1 opacity-80"></div>
+          </div>
+        </div>
+        <div className="absolute top-1/3 right-1/3 animate-float-slow">
+          <div className="w-5 h-14 bg-gradient-to-b from-pink-400 to-pink-600 rounded-t-full rounded-b-lg opacity-30 shadow-lg">
+            <div className="w-3 h-3 bg-pink-300 rounded-full mx-auto mt-1 opacity-80"></div>
+          </div>
+        </div>
+        <div className="absolute bottom-1/3 left-1/4 animate-float">
+          <div className="w-6 h-15 bg-gradient-to-b from-cyan-400 to-cyan-600 rounded-t-full rounded-b-lg opacity-30 shadow-lg">
+            <div className="w-4 h-4 bg-cyan-300 rounded-full mx-auto mt-1 opacity-80"></div>
+          </div>
         </div>
         
         {/* Particle Effects */}

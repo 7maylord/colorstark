@@ -104,7 +104,7 @@ export default function SetNameModal({ onClose, onNameSet }: SetNameModalProps) 
                 Name Guidelines
               </h4>
               <ul className="text-blue-200 text-sm space-y-1">
-                <li>• 31 characters maximum (felt252 limit)</li>
+                <li>• 31 characters maximum</li>
                 <li>• Choose something memorable</li>
                 <li>• Names are stored on the blockchain</li>
               </ul>

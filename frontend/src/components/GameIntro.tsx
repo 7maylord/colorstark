@@ -20,7 +20,7 @@ export default function GameIntro({ onStartGame, isLoadingPlayer, walletConnecte
           <h1 className="text-6xl md:text-8xl font-black bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 bg-clip-text text-transparent tracking-tight">
             COLOR
           </h1>
-          <div className="w-32 h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-pulse transform rotate-55 mx-4"></div>
+          <div className="w-32 h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-pulse transform rotate-52 mx-2"></div>
           <h1 className="text-6xl md:text-8xl font-black bg-gradient-to-r from-blue-400 via-teal-500 to-green-500 bg-clip-text text-transparent tracking-tight">
             STARK
           </h1>
@@ -31,10 +31,7 @@ export default function GameIntro({ onStartGame, isLoadingPlayer, walletConnecte
       <div className="space-y-6 animate-slide-up-delayed">
         {!walletConnected ? (
           <div className="space-y-4">
-            <p className="text-gray-400 text-lg">Connect your Starknet wallet to begin</p>
-            <div className="flex justify-center">
-              <WalletConnector />
-            </div>
+            <p className="flex justify-center text-gray-400 text-lg">Connect your Starknet wallet to begin</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -68,10 +65,6 @@ export default function GameIntro({ onStartGame, isLoadingPlayer, walletConnecte
                 </>
               )}
             </button>
-            
-            <p className="text-gray-400 text-sm">
-              Ready to test your color matching skills?
-            </p>
           </div>
         )}
       </div>

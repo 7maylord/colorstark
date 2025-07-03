@@ -4,6 +4,7 @@ import { useAccount, useConnect, useDisconnect } from "@starknet-react/core";
 import { StarknetkitConnector, useStarknetkitConnectModal } from "starknetkit";
 import { useMemo, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useStarknet } from '@/hooks/useStarknet';
 
 // Simple classNames utility
 const classNames = (...classes: (string | undefined | null | false)[]): string => {
@@ -71,16 +72,30 @@ function WalletConnected() {
   const { address } = useAccount();
   const { disconnect } = useDisconnect();
   const [isOpen, setIsOpen] = useState(false);
+  const [justCopied, setJustCopied] = useState(false);
+  const { playerName } = useStarknet();
 
   const shortenedAddress = useMemo(() => {
     if (!address) return '';
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   }, [address]);
 
+  // Display name: show player name if it exists and isn't 'Unnamed', otherwise show shortened address
+  const displayName = useMemo(() => {
+    if (playerName && playerName !== 'Unnamed' && playerName.trim()) {
+      return playerName;
+    }
+    return shortenedAddress;
+  }, [playerName, shortenedAddress]);
+
   const copyToClipboard = async () => {
     if (address) {
       await navigator.clipboard.writeText(address);
-      // You could add a toast notification here
+      setJustCopied(true);
+      // Reset back to copy icon after 5 seconds
+      setTimeout(() => {
+        setJustCopied(false);
+      }, 5000);
     }
   };
 
@@ -112,7 +127,7 @@ function WalletConnected() {
         </div>
         
         <span className="relative z-10 hidden sm:inline font-mono">
-          {shortenedAddress}
+          {displayName}
         </span>
         <span className="relative z-10 sm:hidden font-mono">
           {address.slice(0, 4)}...
@@ -134,13 +149,13 @@ function WalletConnected() {
         <>
           {/* Backdrop */}
           <div 
-            className="fixed inset-0 z-40" 
+            className="fixed inset-0 z-[60]" 
             onClick={() => setIsOpen(false)}
           />
           
           {/* Dropdown Content */}
           <div className="
-            absolute right-0 top-full mt-2 w-80 z-50
+            absolute right-0 top-full mt-2 w-80 z-[70]
             bg-black/80 backdrop-blur-xl border border-white/20 
             rounded-2xl shadow-2xl shadow-purple-500/20
             animate-fade-in
@@ -162,13 +177,22 @@ function WalletConnected() {
                     <p className="text-gray-400 text-xs mb-1">Wallet Address</p>
                     <p className="text-white font-mono text-sm break-all">{address}</p>
                   </div>
-                  <button className="
-                    p-2 rounded-lg bg-white/10 hover:bg-white/20 
-                    transition-all duration-300 group-hover:scale-110
-                  ">
-                    <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
+                  <button className={`
+                    p-2 rounded-lg transition-all duration-300 group-hover:scale-110
+                    ${justCopied 
+                      ? 'bg-green-500/20 hover:bg-green-500/30 border border-green-500/30' 
+                      : 'bg-white/10 hover:bg-white/20'
+                    }
+                  `}>
+                    {justCopied ? (
+                      <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    )}
                   </button>
                 </div>
               </div>

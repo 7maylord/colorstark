@@ -50,7 +50,7 @@ export default function RootLayout({
                   </a>
                   {" | "}
                   <a 
-                    href="https://github.com/starknet-io" 
+                    href="https://github.com/7maylord/colorstark" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-starknet-600 hover:text-starknet-700 font-medium"

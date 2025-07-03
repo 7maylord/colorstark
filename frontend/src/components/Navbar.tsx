@@ -5,15 +5,14 @@ import WalletConnector from './WalletConnector';
 
 const Logo = () => (
   <Link href="/" className="flex items-center space-x-3 group">
-    <div className="relative">
-      <div className="w-10 h-10 bg-gradient-to-r from-starknet-500 to-primary-500 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-purple-500/25 transition-all duration-300 group-hover:scale-105">
-        <span className="text-white font-bold text-xl">C</span>
-      </div>
-      <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-blue-400 rounded-xl blur-sm opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
+    <div className="flex items-center space-x-1">
+      <span className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 bg-clip-text text-transparent group-hover:from-purple-300 group-hover:via-pink-400 group-hover:to-red-400 transition-all duration-300">
+        Color
+      </span>
+      <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-teal-500 to-green-500 bg-clip-text text-transparent group-hover:from-blue-300 group-hover:via-teal-400 group-hover:to-green-400 transition-all duration-300">
+        Stark
+      </span>
     </div>
-    <span className="text-2xl font-bold bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent group-hover:from-purple-200 group-hover:to-blue-200 transition-all duration-300">
-      ColorStark
-    </span>
   </Link>
 );
 
@@ -24,12 +23,12 @@ interface NavbarProps {
 const Navbar = ({ className = '' }: NavbarProps) => {
   return (
     <div className={`
-      relative backdrop-blur-xl bg-gradient-to-r from-purple-900/10 via-black/5 to-blue-900/10 
-      border-b border-purple-500/20 shadow-2xl shadow-purple-500/20 ${className}
+      relative backdrop-blur-xl bg-gradient-to-r from-purple-900/30 via-black/20 to-blue-900/30 
+      border-b border-purple-500/40 shadow-2xl shadow-purple-500/30 z-40 ${className}
     `}>
       {/* Enhanced gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-purple-600/5 via-transparent to-blue-600/5 pointer-events-none"></div>
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-900/5 to-transparent pointer-events-none"></div>
+      <div className="absolute inset-0 bg-gradient-to-r from-purple-600/15 via-transparent to-blue-600/15 pointer-events-none"></div>
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-900/10 to-transparent pointer-events-none"></div>
       
       <div className="relative navbar max-w-7xl mx-auto flex items-center justify-between">
         <div className="navbar-start flex items-center">
@@ -42,14 +41,16 @@ const Navbar = ({ className = '' }: NavbarProps) => {
               <Link 
                 href="/leaderboard" 
                 className="
-                  text-gray-200 hover:text-white font-medium px-4 py-2 rounded-lg
+                  font-medium px-4 py-2 rounded-lg
                   hover:bg-white/10 backdrop-blur-sm border border-transparent
                   hover:border-white/20 transition-all duration-300
                   hover:shadow-lg hover:shadow-yellow-500/20
                   relative group overflow-hidden
                 "
               >
-                <span className="relative z-10">Leaderboard</span>
+                <span className="relative z-10 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent group-hover:from-yellow-300 group-hover:via-orange-400 group-hover:to-red-400 transition-all duration-300">
+                  Leaderboard
+                </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-yellow-600/0 via-yellow-600/20 to-yellow-600/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
               </Link>
             </li>
@@ -75,20 +76,35 @@ const Navbar = ({ className = '' }: NavbarProps) => {
             <ul 
               tabIndex={0} 
               className="
-                menu menu-sm dropdown-content mt-3 z-[1] p-3 shadow-2xl
+                menu menu-sm dropdown-content mt-3 z-50 p-3 shadow-2xl
                 bg-black/80 backdrop-blur-xl border border-white/20 rounded-2xl w-52
                 shadow-purple-500/20
               "
             >
               <li>
                 <Link 
-                  href="/leaderboard" 
+                  href="/game" 
                   className="
-                    text-gray-200 hover:text-white hover:bg-white/10 rounded-lg
+                    hover:bg-white/10 rounded-lg
                     transition-all duration-300 border border-transparent hover:border-white/20
                   "
                 >
-                  Leaderboard
+                  <span className="bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 bg-clip-text text-transparent">
+                    Game
+                  </span>
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  href="/leaderboard" 
+                  className="
+                    hover:bg-white/10 rounded-lg
+                    transition-all duration-300 border border-transparent hover:border-white/20
+                  "
+                >
+                  <span className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent">
+                    Leaderboard
+                  </span>
                 </Link>
               </li>
             </ul>
