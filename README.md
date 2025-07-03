@@ -16,27 +16,11 @@ The ColorStark Game is a decentralized, on-chain game built on StarkNet, where p
 ```
 colorstark/
 ├── contracts/
-│   ├── .gitignore
-│   ├── Contract Explanation.md
-│   ├── Scarb.lock
-│   ├── Scarb.toml
-│   ├── snfoundry.toml
 │   ├── src/
 │   │   └── lib.cairo
-│   ├── target/
-│   │   └── dev/
-│   │       ├── contracts.starknet_artifacts.json
-│   │       └── contracts_ColorStark.contract_class.json
 │   └── tests/
 │       └── test_contract.cairo
 ├── frontend/
-│   ├── .gitignore
-│   ├── eslint.config.mjs
-│   ├── next-env.d.ts
-│   ├── next.config.ts
-│   ├── package-lock.json
-│   ├── package.json
-│   ├── postcss.config.mjs
 │   ├── public/
 │   │   ├── file.svg
 │   │   ├── globe.svg
@@ -61,20 +45,7 @@ colorstark/
 │   │   │   └── useStarknet.ts
 │   │   └── utils/
 │   │       └── index.ts
-│   ├── tsconfig.json
-│   └── .next/
-│       ├── app-build-manifest.json
-│       ├── build-manifest.json
-│       ├── fallback-build-manifest.json
-│       ├── package.json
-│       ├── trace
-│       ├── transform.js
-│       ├── transform.js.map
-│       ├── build/
-│       ├── cache/
-│       ├── server/
-│       ├── static/
-│       └── types/
+│   └── tsconfig.json
 ├── .gitignore
 └── README.md
 ```
