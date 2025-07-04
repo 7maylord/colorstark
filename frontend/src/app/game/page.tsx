@@ -24,7 +24,9 @@ export default function GamePage() {
     playerName, 
     updatePlayerData, 
     updateLeaderboard, 
-    updateGameState 
+    updateGameState,
+    findActiveGame,
+    getNextGameId
   } = useStarknet();
   const [showSetNameModal, setShowSetNameModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -102,85 +104,64 @@ export default function GamePage() {
           <div className="w-32"></div> {/* Spacer for centering */}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Game Area */}
-          <div className="lg:col-span-3 space-y-6">
-            <PlayerInfo 
+        {/* Player Info Header */}
+        <div className="mb-8">
+          <PlayerInfo 
+            account={account || null}
+            contract={contract}
+            playerName={playerName}
+            playerPoints={playerPoints}
+            updatePlayerData={updatePlayerData}
+            updateLeaderboard={updateLeaderboard}
+          />
+        </div>
+
+        {/* Main Game Area */}
+        {gameState ? (
+          <div className="space-y-8">
+            <GameBoard
               account={account || null}
               contract={contract}
-              playerName={playerName}
-              playerPoints={playerPoints}
+              gameId={gameId}
+              gameState={gameState}
+              correctBottles={correctBottles}
+              updateGameState={updateGameState}
               updatePlayerData={updatePlayerData}
-              updateLeaderboard={updateLeaderboard}
             />
             
-            {gameState && (
-              <GameBoard
+            {/* Game Controls */}
+            <div className="flex justify-center">
+              <GameControls
                 account={account || null}
                 contract={contract}
-                gameId={gameId}
                 gameState={gameState}
-                correctBottles={correctBottles}
+                gameId={gameId}
+                setGameId={setGameId}
                 updateGameState={updateGameState}
-                updatePlayerData={updatePlayerData}
+                findActiveGame={findActiveGame}
+                getNextGameId={getNextGameId}
               />
-            )}
-            
-            <GameControls
-              account={account || null}
-              contract={contract}
-              gameState={gameState}
-              gameId={gameId}
-              setGameId={setGameId}
-              updateGameState={updateGameState}
-            />
-          </div>
-          
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6">
-              <h3 className="text-xl font-bold text-white mb-4">Game Stats</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Your Score</span>
-                  <span className="text-white font-bold">{playerPoints}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Games Played</span>
-                  <span className="text-white font-bold">-</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Win Rate</span>
-                  <span className="text-white font-bold">-</span>
-                </div>
-              </div>
-              <div className="mt-6 pt-4 border-t border-white/10">
-                <p className="text-gray-400 text-sm text-center">
-                  Match the bottle colors to advance!
-                </p>
-              </div>
-            </div>
-
-            {/* Game Instructions */}
-            <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6 mt-6">
-              <h3 className="text-xl font-bold text-white mb-4">How to Play</h3>
-              <div className="space-y-3 text-sm text-gray-300">
-                <div className="flex items-start space-x-2">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
-                  <p>Click on bottles to switch their positions</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                  <p>Match the target arrangement shown above</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
-                  <p>Complete levels to earn points and climb the leaderboard</p>
-                </div>
-              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="text-center py-16">
+            <div className="bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 p-12">
+              <div className="text-6xl mb-6">🧪</div>
+              <h3 className="text-2xl font-bold text-white mb-4">Ready to Start?</h3>
+              <p className="text-gray-300 mb-8">Click "Start Game" below to begin your bottle-switching adventure!</p>
+              <GameControls
+                account={account || null}
+                contract={contract}
+                gameState={gameState}
+                gameId={gameId}
+                setGameId={setGameId}
+                updateGameState={updateGameState}
+                findActiveGame={findActiveGame}
+                getNextGameId={getNextGameId}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Set Name Modal */}

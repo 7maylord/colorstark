@@ -87,6 +87,17 @@ export function useStarknet() {
     }
   }
 
+  function parseColorFromContract(colorObj: any): number {
+    if (typeof colorObj === 'object' && colorObj !== null) {
+      if (colorObj.Red !== undefined) return 0;
+      if (colorObj.Blue !== undefined) return 1;
+      if (colorObj.Green !== undefined) return 2;
+      if (colorObj.Yellow !== undefined) return 3;
+      if (colorObj.Purple !== undefined) return 4;
+    }
+    return 0; // Default to Red if parsing fails
+  }
+
   async function updateGameState(gameId: string | null) {
     if (contract && gameId) {
       try {
@@ -97,28 +108,16 @@ export function useStarknet() {
           throw new Error('Invalid game state response');
         }
         
+        // Parse the game state according to the contract structure
         setGameState({
           player: String(state[0]),
-          bottles: Array.isArray(state[1]) ? state[1].map((color: any) => {
-            if (color.Red !== undefined) return 0;
-            if (color.Blue !== undefined) return 1;
-            if (color.Green !== undefined) return 2;
-            if (color.Yellow !== undefined) return 3;
-            if (color.Purple !== undefined) return 4;
-            return 0;
-          }) : [],
-          target: Array.isArray(state[2]) ? state[2].map((color: any) => {
-            if (color.Red !== undefined) return 0;
-            if (color.Blue !== undefined) return 1;
-            if (color.Green !== undefined) return 2;
-            if (color.Yellow !== undefined) return 3;
-            if (color.Purple !== undefined) return 4;
-            return 0;
-          }) : [],
+          bottles: Array.isArray(state[1]) ? state[1].map(parseColorFromContract) : [],
+          target: Array.isArray(state[2]) ? state[2].map(parseColorFromContract) : [],
           moves: Number(state[3]) || 0,
           isActive: state[4]?.True !== undefined,
         });
         
+        // Get correct bottles count
         const correct = await contract.call('get_correct_bottles', [gameIdUint256]);
         setCorrectBottles(Number(correct) || 0);
       } catch (error) {
@@ -132,44 +131,54 @@ export function useStarknet() {
     }
   }
 
+  async function findActiveGame(): Promise<string | null> {
+    if (!account || !contract || !address) return null;
+    
+    try {
+      // Use the new smart contract function to get active game directly
+      const activeGameId = await contract.call('get_player_active_game', [address]);
+      const gameIdString = uint256.uint256ToBN(activeGameId as any).toString();
+      
+      // Return the game ID if it's not 0 (which means no active game)
+      return gameIdString !== '0' ? gameIdString : null;
+    } catch (error) {
+      console.error('Error finding active game:', error);
+      return null;
+    }
+  }
+
   async function checkActiveGame() {
-    if (account && contract && address) {
-      try {
-        let latestGameId = gameId ? BigInt(gameId) : BigInt(1);
-        let found = false;
-        
-        // Check for active games
-        for (let i = 0; i < 10; i++) {
-          try {
-            const testGameId = (latestGameId + BigInt(i)).toString();
-            const gameIdUint256 = uint256.bnToUint256(BigInt(testGameId));
-            const state: any = await contract.call('get_game_state', [gameIdUint256]);
-            
-            if (Array.isArray(state) && 
-                state.length >= 5 && 
-                state[4]?.True !== undefined && 
-                String(state[0]) === address) {
-              setGameId(testGameId);
-              await updateGameState(testGameId);
-              found = true;
-              break;
-            }
-          } catch (gameError) {
-            // Game doesn't exist or other error, continue checking
-            console.log(`Game ${latestGameId + BigInt(i)} not found or error:`, gameError);
-            continue;
-          }
-        }
-        
-        if (!found) {
-          setGameId(null);
-          setGameState(null);
-        }
-      } catch (error) {
-        console.error('Error checking active game:', error);
-        setGameId(null);
-        setGameState(null);
-      }
+    const activeGameId = await findActiveGame();
+    if (activeGameId) {
+      setGameId(activeGameId);
+      await updateGameState(activeGameId);
+    } else {
+      setGameId(null);
+      setGameState(null);
+    }
+  }
+
+  async function hasActiveGame(): Promise<boolean> {
+    if (!account || !contract || !address) return false;
+    
+    try {
+      const hasActive = await contract.call('has_active_game', [address]);
+      return Boolean(hasActive);
+    } catch (error) {
+      console.error('Error checking if player has active game:', error);
+      return false;
+    }
+  }
+
+  async function getNextGameId(): Promise<string> {
+    if (!contract) return '1';
+    
+    try {
+      const nextId = await contract.call('get_next_game_id', []);
+      return uint256.uint256ToBN(nextId as any).toString();
+    } catch (error) {
+      console.error('Error getting next game ID:', error);
+      return '1';
     }
   }
 
@@ -194,5 +203,8 @@ export function useStarknet() {
     updatePlayerData,
     updateLeaderboard,
     updateGameState,
+    findActiveGame,
+    hasActiveGame,
+    getNextGameId,
   };
 }
