@@ -112,7 +112,7 @@ Declare and deploy the contract using Starknet Foundry's sncast:
 
 ```bash
 # Declare the contract
-sncast --url http://localhost:5050 declare --contract-name ColorBottleGame
+sncast --url http://localhost:5050 declare --contract-name ColorStark
 # Deploy the contract
 sncast --url http://localhost:5050 deploy --class-hash <CLASS_HASH>
 ```

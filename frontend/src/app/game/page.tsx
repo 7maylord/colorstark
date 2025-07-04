@@ -60,8 +60,22 @@ export default function GamePage() {
     checkPlayerData();
   }, [address, contract, playerName, router]);
 
-  const handleNameSet = () => {
+  const handleNameSet = async () => {
     setShowSetNameModal(false);
+    // Automatically start a new game after setting name
+    if (contract && account) {
+      try {
+        await contract.invoke('start_game', []);
+        // Wait a moment for the transaction to process
+        setTimeout(async () => {
+          const nextGameId = await getNextGameId();
+          setGameId(nextGameId);
+          await updateGameState(nextGameId);
+        }, 2000);
+      } catch (error) {
+        console.error('Error auto-starting game after name set:', error);
+      }
+    }
   };
 
   const handleBackToHome = () => {

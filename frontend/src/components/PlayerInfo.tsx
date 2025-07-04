@@ -18,13 +18,21 @@ export default function PlayerInfo({ account, contract, playerName, playerPoints
   const [newName, setNewName] = useState('');
 
   async function handleSetName() {
-    if (!account || !contract || !newName) return;
+    if (!account || !contract || !newName.trim()) return;
     try {
-      const nameFelt = BigInt(newName.split('').map(c => c.charCodeAt(0)).join(''));
-      await contract.call('set_player_name', [nameFelt]);
+      // Use shortString.encodeShortString for proper felt252 encoding
+      const { shortString } = await import('starknet');
+      const nameFelt = shortString.encodeShortString(newName.trim());
+      
+      // Use invoke for state-changing operations
+      await contract.invoke('set_player_name', [nameFelt]);
       setNewName('');
-      await updatePlayerData(account);
-      await updateLeaderboard();
+      
+      // Wait a moment for transaction to process
+      setTimeout(async () => {
+        await updatePlayerData(account);
+        await updateLeaderboard();
+      }, 2000);
     } catch (error) {
       console.error('Error setting name:', error);
     }

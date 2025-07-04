@@ -361,3 +361,70 @@ fn test_leaderboard() {
     assert(bob_data.name == 'Bob', 'Wrong Bob name');
     assert(bob_data.points == 0, 'Wrong Bob points');
 }
+
+
+
+#[test]
+fn test_upgrade_as_owner() {
+    let contract = deploy_contract();
+    let new_class_hash = starknet::class_hash_const::<0x123>();
+    start_cheat_caller_address(contract.contract_address, owner());
+    // Should not panic
+    contract.upgrade(new_class_hash);
+    stop_cheat_caller_address(contract.contract_address);
+}
+
+#[test]
+fn test_get_player_game_history() {
+    let contract = deploy_contract();
+    start_cheat_caller_address(contract.contract_address, player1());
+    contract.set_player_name('Alice');
+    contract.start_game();
+    contract.end_game(1);
+    contract.start_game();
+    let history = contract.get_player_game_history(player1());
+    assert(history.len() == 2, 'Game history should have 2 games');
+    assert(history.at(0) == 1, 'First game id should be 1');
+    assert(history.at(1) == 2, 'Second game id should be 2');
+    stop_cheat_caller_address(contract.contract_address);
+}
+
+#[test]
+fn test_get_player_active_game() {
+    let contract = deploy_contract();
+    start_cheat_caller_address(contract.contract_address, player1());
+    contract.set_player_name('Alice');
+    contract.start_game();
+    let active_game = contract.get_player_active_game(player1());
+    assert(active_game == 1, 'Active game id should be 1');
+    contract.end_game(1);
+    let no_active_game = contract.get_player_active_game(player1());
+    assert(no_active_game == 0, 'No active game should be 0');
+    stop_cheat_caller_address(contract.contract_address);
+}
+
+#[test]
+fn test_get_next_game_id() {
+    let contract = deploy_contract();
+    start_cheat_caller_address(contract.contract_address, player1());
+    contract.set_player_name('Alice');
+    let next_id_1 = contract.get_next_game_id();
+    assert(next_id_1 == 1, 'First next game id should be 1');
+    contract.start_game();
+    let next_id_2 = contract.get_next_game_id();
+    assert!(next_id_2 == 2, "Next game id should be 2 after starting a game");
+    stop_cheat_caller_address(contract.contract_address);
+}
+
+#[test]
+#[should_panic(expected: ('Game not active',))]
+fn test_end_already_ended_game() {
+    let contract = deploy_contract();
+    start_cheat_caller_address(contract.contract_address, player1());
+    contract.set_player_name('Alice');
+    contract.start_game();
+    contract.end_game(1);
+    // Try to end again, should panic
+    contract.end_game(1);
+    stop_cheat_caller_address(contract.contract_address);
+}
