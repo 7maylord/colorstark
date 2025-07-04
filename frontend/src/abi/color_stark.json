@@ -266,6 +266,33 @@
         "state_mutability": "view"
       },
       {
+        "name": "is_owner",
+        "type": "function",
+        "inputs": [
+          {
+            "name": "address",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "name": "get_owner",
+        "type": "function",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
         "name": "upgrade",
         "type": "function",
         "inputs": [
@@ -280,9 +307,55 @@
     ]
   },
   {
+    "name": "OwnableImpl",
+    "type": "impl",
+    "interface_name": "openzeppelin_access::ownable::interface::IOwnable"
+  },
+  {
+    "name": "openzeppelin_access::ownable::interface::IOwnable",
+    "type": "interface",
+    "items": [
+      {
+        "name": "owner",
+        "type": "function",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "name": "transfer_ownership",
+        "type": "function",
+        "inputs": [
+          {
+            "name": "new_owner",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "name": "renounce_ownership",
+        "type": "function",
+        "inputs": [],
+        "outputs": [],
+        "state_mutability": "external"
+      }
+    ]
+  },
+  {
     "name": "constructor",
     "type": "constructor",
-    "inputs": []
+    "inputs": [
+      {
+        "name": "owner",
+        "type": "core::starknet::contract_address::ContractAddress"
+      }
+    ]
   },
   {
     "kind": "struct",
@@ -360,6 +433,146 @@
     ]
   },
   {
+    "kind": "struct",
+    "name": "contracts::ColorStark::PlayerNameSet",
+    "type": "event",
+    "members": [
+      {
+        "kind": "key",
+        "name": "player",
+        "type": "core::starknet::contract_address::ContractAddress"
+      },
+      {
+        "kind": "data",
+        "name": "name",
+        "type": "core::felt252"
+      }
+    ]
+  },
+  {
+    "kind": "struct",
+    "name": "contracts::ColorStark::GameStarted",
+    "type": "event",
+    "members": [
+      {
+        "kind": "key",
+        "name": "player",
+        "type": "core::starknet::contract_address::ContractAddress"
+      },
+      {
+        "kind": "key",
+        "name": "game_id",
+        "type": "core::integer::u256"
+      },
+      {
+        "kind": "data",
+        "name": "starting_bottles",
+        "type": "core::array::Array::<contracts::types::Color>"
+      },
+      {
+        "kind": "data",
+        "name": "target_bottles",
+        "type": "core::array::Array::<contracts::types::Color>"
+      }
+    ]
+  },
+  {
+    "kind": "struct",
+    "name": "contracts::ColorStark::MoveMade",
+    "type": "event",
+    "members": [
+      {
+        "kind": "key",
+        "name": "player",
+        "type": "core::starknet::contract_address::ContractAddress"
+      },
+      {
+        "kind": "key",
+        "name": "game_id",
+        "type": "core::integer::u256"
+      },
+      {
+        "kind": "data",
+        "name": "bottle_from",
+        "type": "core::integer::u8"
+      },
+      {
+        "kind": "data",
+        "name": "bottle_to",
+        "type": "core::integer::u8"
+      },
+      {
+        "kind": "data",
+        "name": "moves",
+        "type": "core::integer::u8"
+      },
+      {
+        "kind": "data",
+        "name": "correct_bottles",
+        "type": "core::integer::u8"
+      }
+    ]
+  },
+  {
+    "kind": "struct",
+    "name": "contracts::ColorStark::GameCompleted",
+    "type": "event",
+    "members": [
+      {
+        "kind": "key",
+        "name": "player",
+        "type": "core::starknet::contract_address::ContractAddress"
+      },
+      {
+        "kind": "key",
+        "name": "game_id",
+        "type": "core::integer::u256"
+      },
+      {
+        "kind": "data",
+        "name": "final_moves",
+        "type": "core::integer::u8"
+      },
+      {
+        "kind": "data",
+        "name": "points_earned",
+        "type": "core::integer::u256"
+      },
+      {
+        "kind": "data",
+        "name": "total_points",
+        "type": "core::integer::u256"
+      }
+    ]
+  },
+  {
+    "kind": "struct",
+    "name": "contracts::ColorStark::GameEnded",
+    "type": "event",
+    "members": [
+      {
+        "kind": "key",
+        "name": "player",
+        "type": "core::starknet::contract_address::ContractAddress"
+      },
+      {
+        "kind": "key",
+        "name": "game_id",
+        "type": "core::integer::u256"
+      },
+      {
+        "kind": "data",
+        "name": "moves",
+        "type": "core::integer::u8"
+      },
+      {
+        "kind": "data",
+        "name": "was_completed",
+        "type": "core::bool"
+      }
+    ]
+  },
+  {
     "kind": "enum",
     "name": "contracts::ColorStark::Event",
     "type": "event",
@@ -373,6 +586,31 @@
         "kind": "flat",
         "name": "OwnableEvent",
         "type": "openzeppelin_access::ownable::ownable::OwnableComponent::Event"
+      },
+      {
+        "kind": "nested",
+        "name": "PlayerNameSet",
+        "type": "contracts::ColorStark::PlayerNameSet"
+      },
+      {
+        "kind": "nested",
+        "name": "GameStarted",
+        "type": "contracts::ColorStark::GameStarted"
+      },
+      {
+        "kind": "nested",
+        "name": "MoveMade",
+        "type": "contracts::ColorStark::MoveMade"
+      },
+      {
+        "kind": "nested",
+        "name": "GameCompleted",
+        "type": "contracts::ColorStark::GameCompleted"
+      },
+      {
+        "kind": "nested",
+        "name": "GameEnded",
+        "type": "contracts::ColorStark::GameEnded"
       }
     ]
   }
