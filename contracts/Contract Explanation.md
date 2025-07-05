@@ -217,3 +217,12 @@ fn constructor(ref self: ContractState) {
 * 👑 Owner-only upgrade rights
 
 ---
+
+## Example Gameplay
+
+*   Start Game → Random target is set (e.g., [Blue, Red, Purple, Green, Yellow]).
+*   Initial Setup → Bottles are shuffled (e.g., [Red, Blue, Green, Yellow, Purple]).
+*   Player Swaps:
+*   Swap Bottle 0 (Red) and Bottle 1 (Blue) → [Blue, Red, Green, Yellow, Purple] (now 2 correct).
+*   Continue swapping until the arrangement matches the target.
+*   Win Condition → When all bottles match, the game ends, and points are awarded.

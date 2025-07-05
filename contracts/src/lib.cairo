@@ -1,6 +1,6 @@
 use starknet::{ContractAddress, ClassHash};
 use core::array::Array;
-use core::pedersen::pedersen;
+// use core::pedersen::pedersen;
 
 
 pub mod types {
