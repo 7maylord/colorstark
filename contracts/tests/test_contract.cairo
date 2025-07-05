@@ -349,10 +349,9 @@ mod tests {
         assert(*bob_data.points == 0, 'Wrong Bob points');
     }
 
-      // Add a main test runner function
+      //run all tests
     fn run_all_tests() {
         test_set_player_name();
         test_multiple_players_registration();
-        // Add other test function calls here
     }
 }

@@ -42,6 +42,15 @@ pub trait IColorStark<TContractState> {
     fn get_player_points(self: @TContractState, player: ContractAddress) -> u256;
     fn get_player_name(self: @TContractState, player: ContractAddress) -> felt252;
     fn get_all_player_points(self: @TContractState) -> Array<PlayerData>;
+    
+    // New functions for better frontend integration
+    fn get_player_active_game(self: @TContractState, player: ContractAddress) -> u256;
+    fn get_next_game_id(self: @TContractState) -> u256;
+    fn has_active_game(self: @TContractState, player: ContractAddress) -> bool;
+    fn get_player_game_history(self: @TContractState, player: ContractAddress) -> Array<u256>;
+
+    fn is_owner(self: @TContractState, address: ContractAddress) -> bool;
+    fn get_owner(self: @TContractState) -> ContractAddress;
     fn upgrade(ref self: TContractState, new_class_hash: ClassHash);
 }
 
@@ -60,6 +69,9 @@ pub mod ColorStark {
 
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
+    
+    #[abi(embed_v0)]
+    impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
 
     #[storage]
     struct Storage {
@@ -94,11 +106,67 @@ pub mod ColorStark {
         UpgradeableEvent: UpgradeableComponent::Event,
         #[flat]
         OwnableEvent: OwnableComponent::Event,
+        
+        // Custom game events
+        PlayerNameSet: PlayerNameSet,
+        GameStarted: GameStarted,
+        MoveMade: MoveMade,
+        GameCompleted: GameCompleted,
+        GameEnded: GameEnded,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct PlayerNameSet {
+        #[key]
+        player: ContractAddress,
+        name: felt252,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct GameStarted {
+        #[key]
+        player: ContractAddress,
+        #[key]
+        game_id: u256,
+        starting_bottles: Array<Color>,
+        target_bottles: Array<Color>,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct MoveMade {
+        #[key]
+        player: ContractAddress,
+        #[key]
+        game_id: u256,
+        bottle_from: u8,
+        bottle_to: u8,
+        moves: u8,
+        correct_bottles: u8,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct GameCompleted {
+        #[key]
+        player: ContractAddress,
+        #[key]
+        game_id: u256,
+        final_moves: u8,
+        points_earned: u256,
+        total_points: u256,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct GameEnded {
+        #[key]
+        player: ContractAddress,
+        #[key]
+        game_id: u256,
+        moves: u8,
+        was_completed: bool,
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState) {
-        let owner = get_caller_address();
+    fn constructor(ref self: ContractState, owner: ContractAddress,) {
         self.ownable.initializer(owner);
         self.next_game_id.write(1);
         self.player_count.write(0);
@@ -114,11 +182,13 @@ pub mod ColorStark {
                 self.players.entry(count).write(player);
                 self.player_count.write(count + 1);
             }
+            
+            self.emit(PlayerNameSet { player, name });
         }
 
         fn start_game(ref self: ContractState) {
             let player = get_caller_address();
-            assert(self.player_games.entry(player).read() == 0, 'Player already in game');
+            assert(!self.has_active_game(player), 'Player already in game');
             let game_id = self.next_game_id.read();
 
             let seed: u256 = pedersen(
@@ -149,6 +219,9 @@ pub mod ColorStark {
             self.game_state.entry(game_id).write(game);
             self.player_games.entry(player).write(game_id);
             self.next_game_id.write(game_id + 1);
+            
+          
+            self.emit(GameStarted { player, game_id, starting_bottles: shuffled_starting_colors.clone(),target_bottles: shuffled_target_colors.clone(), });
         }
 
         fn make_move(ref self: ContractState, game_id: u256, bottle_from: u8, bottle_to: u8) {
@@ -169,13 +242,20 @@ pub mod ColorStark {
             self.game_state.entry(game_id).write(game);
 
             let correct = self.get_correct_bottles(game_id);
+            
+            self.emit(MoveMade { player, game_id, bottle_from, bottle_to, moves: game.moves, correct_bottles: correct });
+            
             if correct == 5 {
                 let current_points = self.player_points.entry(player).read();
-                self.player_points.entry(player).write(current_points + 10);
+                let points_earned = 10_u256;
+                let new_total_points = current_points + points_earned;
+                self.player_points.entry(player).write(new_total_points);
                 let mut game = self.game_state.entry(game_id).read();
                 game.is_active = false;
                 self.game_state.entry(game_id).write(game);
                 self.player_games.entry(player).write(0);
+                
+                self.emit(GameCompleted { player, game_id, final_moves: game.moves, points_earned, total_points: new_total_points });
             }
         }
 
@@ -188,6 +268,8 @@ pub mod ColorStark {
             game.is_active = false;
             self.game_state.entry(game_id).write(game);
             self.player_games.entry(player).write(0);
+            
+            self.emit(GameEnded { player, game_id, moves: game.moves, was_completed: false });
         }
 
         fn get_game_state(
@@ -241,6 +323,48 @@ pub mod ColorStark {
                 i += 1;
             }
             result
+        }
+
+        // New functions for better frontend integration
+        fn get_player_active_game(self: @ContractState, player: ContractAddress) -> u256 {
+            self.player_games.entry(player).read()
+        }
+
+        fn get_next_game_id(self: @ContractState) -> u256 {
+            self.next_game_id.read()
+        }
+
+        fn has_active_game(self: @ContractState, player: ContractAddress) -> bool {
+            let game_id = self.player_games.entry(player).read();
+            if game_id == 0 {
+                return false;
+            }
+            let game = self.game_state.entry(game_id).read();
+            game.is_active
+        }
+
+        fn get_player_game_history(self: @ContractState, player: ContractAddress) -> Array<u256> {
+            let mut history = array![];
+            let next_id = self.next_game_id.read();
+            let mut i: u256 = 1;
+            
+            while i < next_id {
+                let game = self.game_state.entry(i).read();
+                if game.player == player {
+                    history.append(i);
+                }
+                i += 1;
+            }
+            
+            history
+        }
+
+        fn is_owner(self: @ContractState, address: ContractAddress) -> bool {
+            self.ownable.owner() == address
+        }
+
+        fn get_owner(self: @ContractState) -> ContractAddress {
+            self.ownable.owner()
         }
 
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {

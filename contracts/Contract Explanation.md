@@ -12,6 +12,10 @@ The `ColorStark` contract is a gamified application built in Cairo 1.0 on Starkn
 * End the game manually if needed
 * Upgrade the contract logic using OpenZeppelin components
 
+### Latest Updates
+
+**Frontend Integration Improvements**: Added dedicated functions for efficient game state management, eliminating the need for frontend applications to iterate through game IDs to find active games. These improvements provide instant game loading and seamless user experience.
+
 ---
 
 ## Imports
@@ -69,16 +73,29 @@ pub struct PlayerData {
 
 Defines public contract methods:
 
-* `set_player_name`
-* `start_game`
-* `make_move`
-* `end_game`
-* `get_game_state`
-* `get_correct_bottles`
-* `get_player_points`
-* `get_player_name`
-* `get_all_player_points`
-* `upgrade`
+### Core Game Functions
+* `set_player_name` - Register player with a name
+* `start_game` - Initialize a new color-matching game
+* `make_move` - Swap bottle positions during gameplay
+* `end_game` - Manually terminate an active game
+
+### Game State Queries
+* `get_game_state` - Retrieve complete game information
+* `get_correct_bottles` - Count bottles in correct positions
+
+### Player Data Functions
+* `get_player_points` - Get player's total score
+* `get_player_name` - Retrieve player's registered name
+* `get_all_player_points` - Get leaderboard data
+
+### Frontend Integration Functions
+* `get_player_active_game` - Get player's current active game ID
+* `get_next_game_id` - Get the next game ID to be assigned
+* `has_active_game` - Check if player has an active game (boolean)
+* `get_player_game_history` - Get all game IDs for a specific player
+
+### Admin Functions
+* `upgrade` - Upgrade contract implementation
 
 ---
 
@@ -147,6 +164,7 @@ fn constructor(ref self: ContractState) {
 
 ### `start_game`
 
+* Validates player doesn't already have an active game using `has_active_game()`
 * Initializes game with random color order using Pedersen hashing
 * Stores both the game and target configurations
 
@@ -179,6 +197,72 @@ fn constructor(ref self: ContractState) {
 ### `upgrade`
 
 * Allows the contract owner to upgrade contract class
+
+---
+
+## New Frontend Integration Functions
+
+These functions were added to streamline frontend integration and eliminate the need for inefficient game ID discovery patterns.
+
+### `get_player_active_game`
+
+```rust
+fn get_player_active_game(self: @ContractState, player: ContractAddress) -> u256
+```
+
+* **Purpose**: Directly retrieve a player's current active game ID
+* **Returns**: Game ID as u256 (returns 0 if no active game)
+* **Benefits**: Eliminates need to iterate through all game IDs to find active games
+* **Usage**: Frontend can instantly load the current game state
+
+### `get_next_game_id`
+
+```rust
+fn get_next_game_id(self: @ContractState) -> u256
+```
+
+* **Purpose**: Get the next game ID that will be assigned when creating a new game
+* **Returns**: The upcoming game ID as u256
+* **Benefits**: Allows frontend to predict and track game creation
+* **Usage**: Frontend can immediately set the correct game ID after calling `start_game`
+
+### `has_active_game`
+
+```rust
+fn has_active_game(self: @ContractState, player: ContractAddress) -> bool
+```
+
+* **Purpose**: Check if a player currently has an active game
+* **Returns**: Boolean indicating active game status
+* **Benefits**: Simple validation without loading full game state
+* **Usage**: Frontend can show appropriate UI (start game vs continue game)
+
+### `get_player_game_history`
+
+```rust
+fn get_player_game_history(self: @ContractState, player: ContractAddress) -> Array<u256>
+```
+
+* **Purpose**: Retrieve all game IDs associated with a specific player
+* **Returns**: Array of game IDs (both active and completed)
+* **Benefits**: Enables game history features and analytics
+* **Usage**: Frontend can display player's game history and statistics
+
+## Integration Benefits
+
+The addition of these functions transforms the frontend experience:
+
+**Before**: Frontend had to iterate through potentially hundreds of game IDs to find a player's active game, leading to:
+- Slow game loading times
+- Unreliable state discovery
+- Complex error handling
+- Poor user experience
+
+**After**: Frontend can directly query player-specific data, resulting in:
+- Instant game state loading
+- Reliable game ID tracking
+- Clean, simple code
+- Smooth user experience
 
 ---
 
@@ -215,7 +299,8 @@ fn constructor(ref self: ContractState) {
 * 🔒 Upgradability via OpenZeppelin
 * 🧑‍🤝‍🧑 Leaderboard support
 * 👑 Owner-only upgrade rights
-
+* ⚡ Optimized frontend integration functions
+* 🚀 Instant game state loading
 ---
 
 ## Example Gameplay
