@@ -27,11 +27,6 @@ const ColorStarkGame = () => {
   const [showTarget, setShowTarget] = useState(false);
   const [selectedBottle, setSelectedBottle] = useState<number | null>(null);
   const [onchainGameId, setOnchainGameId] = useState<string | null>(null);
-  const [onchainBottles, setOnchainBottles] = useState<BottleColor[]>([]);
-  const [onchainTarget, setOnchainTarget] = useState<BottleColor[]>([]);
-  const [onchainMoves, setOnchainMoves] = useState<number>(0);
-  const [onchainActive, setOnchainActive] = useState<boolean>(false);
-  const [onchainCorrect, setOnchainCorrect] = useState<number>(0);
   const [loadingGame, setLoadingGame] = useState<boolean>(false);
   const [txLoading, setTxLoading] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -39,6 +34,12 @@ const ColorStarkGame = () => {
   const [txError, setTxError] = useState<string | null>(null);
   const [contract, setContract] = useState<Contract | null>(null);
   const [showCongrats, setShowCongrats] = useState(false);
+
+  // --- 1. Add new local state for offchain bottles, target, moves, and gameActive ---
+  const [bottles, setBottles] = useState<BottleColor[]>([]);
+  const [target, setTarget] = useState<BottleColor[]>([]);
+  const [moves, setMoves] = useState<number>(0);
+  const [gameActive, setGameActive] = useState<boolean>(false);
 
   // Helper to parse Color enum from contract
   function parseColor(colorObj: any): BottleColor {
@@ -51,6 +52,24 @@ const ColorStarkGame = () => {
       if (variant.Purple !== undefined) return 'Purple';
     }
     return 'Red';
+  }
+
+  // Helper to count correct bottles
+  function countCorrectBottles(bottles: BottleColor[], target: BottleColor[]) {
+    let correct = 0;
+    for (let i = 0; i < bottles.length; i++) {
+      if (bottles[i] === target[i]) correct++;
+    }
+    return correct;
+  }
+
+  // Helper to check if bottles match the target
+  function bottlesMatchTarget(bottles: BottleColor[], target: BottleColor[]) {
+    if (bottles.length !== target.length) return false;
+    for (let i = 0; i < bottles.length; i++) {
+      if (bottles[i] !== target[i]) return false;
+    }
+    return true;
   }
 
   // Fetch both player name and points in parallel
@@ -114,7 +133,7 @@ const ColorStarkGame = () => {
     }
   }, [account, contractAddress]);
 
-  // Fetch on-chain game state
+  // --- 2. Refactor fetchOnchainGame to initialize local state for offchain play ---
   const fetchOnchainGame = async (gameId: string) => {
     setLoadingGame(true);
     try {
@@ -126,27 +145,26 @@ const ColorStarkGame = () => {
           ? Object.values(state)
           : [];
       if (stateArr && stateArr.length >= 5) {
-        const bottles = Array.isArray(stateArr[1]) ? stateArr[1].map(parseColor) : [];
-        const target = Array.isArray(stateArr[2]) ? stateArr[2].map(parseColor) : [];
-        setOnchainBottles(bottles);
-        setOnchainTarget(target);
-        setOnchainMoves(Number(stateArr[3]));
-        setOnchainActive(Boolean(stateArr[4]));
-        const correct = await readContract.call("get_correct_bottles", [gameId]);
-        setOnchainCorrect(Number(correct));
+        const bottlesArr = Array.isArray(stateArr[1]) ? stateArr[1].map(parseColor) : [];
+        const targetArr = Array.isArray(stateArr[2]) ? stateArr[2].map(parseColor) : [];
+        setBottles(bottlesArr);
+        setTarget(targetArr);
+        setMoves(0); // reset moves for new game
+        setGameActive(Boolean(stateArr[4]));
+        setOnchainGameId(gameId);
       } else {
-        setOnchainBottles([]);
-        setOnchainTarget([]);
-        setOnchainMoves(0);
-        setOnchainActive(false);
-        setOnchainCorrect(0);
+        setBottles([]);
+        setTarget([]);
+        setMoves(0);
+        setGameActive(false);
+        setOnchainGameId(null);
       }
     } catch (err) {
-      setOnchainBottles([]);
-      setOnchainTarget([]);
-      setOnchainMoves(0);
-      setOnchainActive(false);
-      setOnchainCorrect(0);
+      setBottles([]);
+      setTarget([]);
+      setMoves(0);
+      setGameActive(false);
+      setOnchainGameId(null);
     }
     setLoadingGame(false);
   };
@@ -155,11 +173,6 @@ const ColorStarkGame = () => {
   useEffect(() => {
     if (!address) {
       setOnchainGameId(null);
-      setOnchainBottles([]);
-      setOnchainTarget([]);
-      setOnchainMoves(0);
-      setOnchainActive(false);
-      setOnchainCorrect(0);
       localStorage.removeItem("colorstark_active_game_id");
       return;
     }
@@ -183,35 +196,19 @@ const ColorStarkGame = () => {
           await fetchOnchainGame(idStr);
         } else {
           setOnchainGameId(null);
-          setOnchainBottles([]);
-          setOnchainTarget([]);
-          setOnchainMoves(0);
-          setOnchainActive(false);
-          setOnchainCorrect(0);
           localStorage.removeItem("colorstark_active_game_id");
         }
       } catch (err) {
         setOnchainGameId(null);
-        setOnchainBottles([]);
-        setOnchainTarget([]);
-        setOnchainMoves(0);
-        setOnchainActive(false);
-        setOnchainCorrect(0);
         localStorage.removeItem("colorstark_active_game_id");
       }
       setLoadingGame(false);
     })();
   }, [address, contractAddress]);
 
-  // Start game on-chain
+  // --- 3. Refactor startGame to only start on-chain, then initialize local state ---
   const startGame = async () => {
     if (!contract || !address) return;
-    const localGameId = localStorage.getItem("colorstark_active_game_id");
-    if (localGameId && localGameId !== "0") {
-      setOnchainGameId(localGameId);
-      await fetchOnchainGame(localGameId);
-      return;
-    }
     setTxLoading(true);
     try {
       await contract.invoke("start_game", []);
@@ -227,13 +224,12 @@ const ColorStarkGame = () => {
         } else if (typeof gameIdRaw === 'string') {
           idStr = gameIdRaw;
         }
-        setOnchainGameId(idStr);
         if (idStr && idStr !== '0') {
-          localStorage.setItem("colorstark_active_game_id", idStr);
+          await fetchOnchainGame(idStr);
+          setGameActive(true);
         } else {
-          localStorage.removeItem("colorstark_active_game_id");
+          setGameActive(false);
         }
-        if (idStr) await fetchOnchainGame(idStr);
         setTxLoading(false);
       }, 3000);
     } catch (err) {
@@ -241,31 +237,81 @@ const ColorStarkGame = () => {
     }
   };
 
-  // Make move on-chain
-  const makeMove = async (from: number, to: number) => {
-    if (!contract || !onchainGameId) return;
-    setTxLoading(true);
-    try {
-      await contract.invoke("make_move", [onchainGameId, from, to]);
-      setTimeout(async () => {
-        await fetchOnchainGame(onchainGameId);
-        setTxLoading(false);
-      }, 2000);
-    } catch (err) {
-      setTxLoading(false);
-    }
-  };
-
-  const handleBottleClick = async (index: number) => {
-    if (!onchainActive || txLoading || loadingGame) return;
+  // --- 4. Remove on-chain move logic and replace with offchain swap logic ---
+  const handleBottleClick = (index: number) => {
+    if (!gameActive || txLoading || loadingGame) return;
     if (selectedBottle === null) {
       setSelectedBottle(index);
     } else if (selectedBottle === index) {
       setSelectedBottle(null);
     } else {
-      await makeMove(selectedBottle, index);
+      // Swap bottles in local state
+      setBottles((prev) => {
+        const newArr = [...prev];
+        [newArr[selectedBottle], newArr[index]] = [newArr[index], newArr[selectedBottle]];
+        return newArr;
+      });
+      setMoves((m) => m + 1);
       setSelectedBottle(null);
     }
+  };
+
+  // --- 5. Add submitResult function to call contract.submit_result ---
+  const submitResult = async () => {
+    if (!contract || !onchainGameId || !gameActive) return;
+    setTxLoading(true);
+    setTxStatus(null);
+    setTxError(null);
+    
+    try {
+      // Convert bottles to contract enum object format
+      const colorToEnum = (color: BottleColor) => {
+        switch (color) {
+          case 'Red': return 0;
+        case 'Blue': return 1;
+        case 'Green': return 2;
+        case 'Yellow': return 3;
+        case 'Purple': return 4;
+        default: return 0;
+        }
+      };
+      const bottleEnums = bottles.map(colorToEnum);
+    console.log('[submitResult] bottleEnums:', bottleEnums);
+    
+      
+      console.log('[submitResult] Calling contract.invoke', [onchainGameId, bottleEnums, moves]);
+      await contract.invoke('submit_result', [onchainGameId, bottleEnums, moves]);
+      console.log('[submitResult] contract.invoke success');
+      setTxStatus('success');
+      setShowCongrats(true);
+      setGameActive(false);
+      setOnchainGameId(null);
+      setBottles([]);
+      setTarget([]);
+      setMoves(0);
+      // Update points
+      if (contract && address) {
+        try {
+          const pts = await contract.call('get_player_points', [address]);
+          console.log('[submitResult] Updated points:', pts);
+          setPoints(Number(Array.isArray(pts) ? pts[0] : pts));
+        } catch (err) {
+          console.log('[submitResult] Error updating points:', err);
+        }
+      }
+      setTimeout(() => setShowCongrats(false), 5000);
+    } catch (err: any) {
+      console.log('[submitResult] Error:', err);
+      let errorMessage = 'Transaction failed';
+      if (err.message.includes('Game not active')) {
+        errorMessage = 'The game is not active.';
+      } else if (err.message.includes('Final bottles do not match target')) {
+        errorMessage = 'Your bottle arrangement does not match the target.';
+      }
+      setTxStatus('error');
+      setTxError(errorMessage);
+    }
+    setTxLoading(false);
   };
 
   // Listen for onchain game completion
@@ -394,7 +440,7 @@ const ColorStarkGame = () => {
           <div className="max-w-md mx-auto mb-8">
             <div className="bg-gray-100 bg-opacity-10 backdrop-blur-sm rounded-xl p-6 border border-white border-opacity-20">
               <div className="flex gap-4">
-                {!onchainActive ? (
+                {!gameActive ? (
                   <button
                     onClick={startGame}
                     disabled={!playerName || txLoading}
@@ -405,7 +451,6 @@ const ColorStarkGame = () => {
                   </button>
                 ) : (
                   <button
-                    onClick={() => {}} // End game logic will be handled by onchain
                     className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
                     disabled={txLoading}
                   >
@@ -418,14 +463,14 @@ const ColorStarkGame = () => {
           </div>
         )}
         {/* Game Board */}
-        {onchainActive && (
+        {gameActive && (
           <div className="max-w-4xl mx-auto mb-8">
             <div className="bg-gray-500 bg-opacity-10 backdrop-blur-sm rounded-xl p-8 border border-white border-opacity-20">
               <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold mb-2">Game #{onchainGameId}</h2>
                 <div className="flex justify-center gap-6 text-sm">
-                  <span>Moves: {onchainMoves}</span>
-                  <span>Correct: {onchainCorrect}/5</span>
+                  <span>Moves: {moves}</span>
+                  <span>Correct: {countCorrectBottles(bottles, target)}/{bottles.length}</span>
                   <button
                     onClick={() => setShowTarget(!showTarget)}
                     className="flex items-center gap-1 text-blue-300 hover:text-blue-200 transition-colors"
@@ -439,7 +484,7 @@ const ColorStarkGame = () => {
               <div className="text-center mb-6">
                 <h3 className="text-lg font-semibold mb-4">Your Bottles</h3>
                 <div className="flex justify-center">
-                  {onchainBottles.map((color, index) => (
+                  {bottles.map((color, index) => (
                     <BottleComponent
                       key={index}
                       color={color as BottleColor}
@@ -450,13 +495,25 @@ const ColorStarkGame = () => {
                   ))}
                 </div>
                 <p className="text-sm text-gray-300 mt-2">Click two bottles to swap them</p>
+                <button
+                  onClick={submitResult}
+                  disabled={txLoading || !bottlesMatchTarget(bottles, target)}
+                  className="mt-4 px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-white font-semibold transition-colors disabled:opacity-50"
+                >
+                  {txLoading ? 'Submitting...' : 'Submit Result'}
+                </button>
+                {!bottlesMatchTarget(bottles, target) && (
+                  <p className="text-yellow-400 text-sm mt-2">Arrange the bottles to match the target before submitting!</p>
+                )}
+                {txStatus === 'error' && <p className="text-red-400 text-sm mt-2">{txError || 'Transaction failed'}</p>}
+                {txStatus === 'success' && !txLoading && <p className="text-green-400 text-sm mt-2">Game Verified!</p>}
               </div>
               {/* Target Bottles */}
               {showTarget && (
                 <div className="text-center">
                   <h3 className="text-lg font-semibold mb-4">Target Configuration</h3>
                   <div className="flex justify-center">
-                    {onchainTarget.map((color, index) => (
+                    {target.map((color, index) => (
                       <BottleComponent
                         key={index}
                         color={color as BottleColor}

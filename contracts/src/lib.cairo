@@ -28,7 +28,7 @@ use contracts::types::{Color, PlayerData};
 pub trait IColorStark<TContractState> {
     fn set_player_name(ref self: TContractState, name: felt252);
     fn start_game(ref self: TContractState);
-    fn submit_result(ref self: TContractState, game_id: u256, final_bottles: Array<Color>, moves: u8);
+    fn submit_result(ref self: TContractState, game_id: u256, final_bottles: Array<u8>, moves: u8);
     fn end_game(ref self: TContractState, game_id: u256);
     fn get_game_state(
         self: @TContractState, game_id: u256,
@@ -208,41 +208,57 @@ pub mod ColorStark {
                 );
         }
 
-        fn submit_result(ref self: ContractState, game_id: u256, final_bottles: Array<Color>, moves: u8) {
+        fn submit_result(ref self: ContractState, game_id: u256, final_bottles: Array<u8>, moves: u8) {
             let player = get_caller_address();
             let mut game = self.game_state.entry(game_id).read();
             assert(game.is_active, 'Game not active');
             assert(game.player == player, 'Not your game');
-
-            // Build the stored target array
+        
+            // Build the stored target array as Color
             let mut target = array![];
             let mut i: u8 = 0;
             while i < 5 {
                 target.append(self.target.entry((game_id, i)).read());
                 i += 1;
             }
-
+        
+            // Convert final_bottles (u8) to Color for comparison
+            let mut final_colors = array![];
+            let mut j: u32 = 0;
+            while j < final_bottles.len() {
+                let color_index = *final_bottles.at(j);
+                let color = match color_index {
+                    0 => Color::Red(0),
+                    1 => Color::Blue(1),
+                    2 => Color::Green(2),
+                    3 => Color::Yellow(3),
+                    4 => Color::Purple(4),
+                    _ => panic!("Invalid color index"),
+                };
+                final_colors.append(color);
+                j += 1;
+            }
+        
             // Call verify_completion
-            let completed = self.verify_completion(target, final_bottles);
+            let completed = self.verify_completion(target, final_colors);
             assert!(completed, "Final bottles do not match target");
-
-            // update game movesa  and state
+        
+            // Update game moves and state
             game.moves = moves;
             game.is_active = false;
             self.game_state.entry(game_id).write(game);
             self.player_games.entry(player).write(0);
-
+        
             // Award points and mark game as completed
             let current_points = self.player_points.entry(player).read();
             let points_earned = 10_u256;
             let new_total_points = current_points + points_earned;
             self.player_points.entry(player).write(new_total_points);
-            
-
+        
             // Update player total moves
             let prev_moves = self.player_moves.entry(player).read();
             self.player_moves.entry(player).write(prev_moves + moves.into());
-
+        
             self.emit(GameCompleted {
                 player,
                 game_id,

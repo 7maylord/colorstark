@@ -38,7 +38,7 @@ export default function GameIntro() {
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-12 flex flex-col items-center">
       {/* Game Logo/Title */}
-      <div className="mb-8 animate-fade-in">
+      <div className="mb-4 animate-fade-in">
         <div className="flex items-center justify-center gap-6 mb-6">
           <h1 className="text-6xl md:text-8xl font-black bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 bg-clip-text text-transparent tracking-tight">
             COLOR
@@ -58,14 +58,14 @@ export default function GameIntro() {
             <WalletConnectButton />
           </div>
         ) : (
-          <div className="space-y-4 flex flex-col items-center">
+          <div className="space-y-4 mb-4 mt-4flex flex-col items-center">
             {playerName && (
               <div className="text-lg text-white font-semibold">Welcome, {playerName}!</div>
             )}
             <Link href="/game">
               <button
                 className="
-                  relative px-12 py-4 text-2xl font-bold rounded-xl 
+                  relative px-12 mb-4 py-4 text-2xl font-bold rounded-xl 
                   bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 
                   hover:from-purple-500 hover:via-pink-500 hover:to-red-500
                   text-white shadow-2xl border-2 border-white/20
