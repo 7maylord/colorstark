@@ -1,6 +1,6 @@
 'use client';
 
-import { useStarknet } from '@/hooks/useStarknet';
+
 import { useEffect } from 'react';
 
 export default function LeaderboardPage() {

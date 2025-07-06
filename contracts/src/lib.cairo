@@ -1,12 +1,11 @@
-use starknet::{ContractAddress, ClassHash};
 use core::array::Array;
 use core::pedersen::pedersen;
+use starknet::{ClassHash, ContractAddress};
 
 pub mod types {
     use starknet::ContractAddress;
     // use core::serde::Serde;
     // use starknet::Store;
-
 
     #[derive(Copy, Drop, Serde, starknet::Store, PartialEq)]
     #[allow(starknet::store_no_default_variant)]
@@ -23,9 +22,9 @@ pub mod types {
         pub address: ContractAddress,
         pub name: felt252,
         pub points: u256,
+        pub moves: u256,
     }
 }
-
 use contracts::types::{Color, PlayerData};
 
 #[starknet::interface]
@@ -41,26 +40,26 @@ pub trait IColorStark<TContractState> {
     fn get_player_points(self: @TContractState, player: ContractAddress) -> u256;
     fn get_player_name(self: @TContractState, player: ContractAddress) -> felt252;
     fn get_all_player_points(self: @TContractState) -> Array<PlayerData>;
-    
+
     // New functions for better frontend integration
     fn get_player_active_game(self: @TContractState, player: ContractAddress) -> u256;
     fn get_next_game_id(self: @TContractState) -> u256;
     fn has_active_game(self: @TContractState, player: ContractAddress) -> bool;
     fn get_player_game_history(self: @TContractState, player: ContractAddress) -> Array<u256>;
 
-    fn is_owner(self: @TContractState, address: ContractAddress) -> bool;
-    fn get_owner(self: @TContractState) -> ContractAddress;
     fn upgrade(ref self: TContractState, new_class_hash: ClassHash);
 }
 
 #[starknet::contract]
 pub mod ColorStark {
-    use starknet::{ContractAddress, get_caller_address, ClassHash, get_block_timestamp};
     use core::array::{Array, ArrayTrait};
     use core::pedersen::pedersen;
-    use starknet::storage::{StoragePointerWriteAccess, StoragePointerReadAccess, Map, StoragePathEntry};
-    use openzeppelin::upgrades::upgradeable::UpgradeableComponent;
     use openzeppelin::access::ownable::OwnableComponent;
+    use openzeppelin::upgrades::upgradeable::UpgradeableComponent;
+    use starknet::storage::{
+        Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess,
+    };
+    use starknet::{ClassHash, ContractAddress, get_block_timestamp, get_caller_address};
     use super::{Color, PlayerData};
 
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
@@ -68,8 +67,7 @@ pub mod ColorStark {
 
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
-    
-    #[abi(embed_v0)]
+
     impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
 
     #[storage]
@@ -83,7 +81,7 @@ pub mod ColorStark {
         next_game_id: u256,
         bottles: Map<(u256, u8), Color>,
         target: Map<(u256, u8), Color>,
-
+        player_moves: Map<ContractAddress, u256>,
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage,
         #[substorage(v0)]
@@ -105,7 +103,6 @@ pub mod ColorStark {
         UpgradeableEvent: UpgradeableComponent::Event,
         #[flat]
         OwnableEvent: OwnableComponent::Event,
-        
         // Custom game events
         PlayerNameSet: PlayerNameSet,
         GameStarted: GameStarted,
@@ -165,7 +162,7 @@ pub mod ColorStark {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress,) {
+    fn constructor(ref self: ContractState, owner: ContractAddress) {
         self.ownable.initializer(owner);
         self.next_game_id.write(1);
         self.player_count.write(0);
@@ -181,7 +178,7 @@ pub mod ColorStark {
                 self.players.entry(count).write(player);
                 self.player_count.write(count + 1);
             }
-            
+
             self.emit(PlayerNameSet { player, name });
         }
 
@@ -192,21 +189,18 @@ pub mod ColorStark {
 
             let seed: u256 = pedersen(
                 pedersen(get_block_timestamp().into(), player.into()), game_id.try_into().unwrap(),
-            ).into();
+            )
+                .into();
 
             let colors = array![
                 Color::Red(0), Color::Blue(1), Color::Green(2), Color::Yellow(3), Color::Purple(4),
             ];
 
             let shuffled_starting_colors = self.shuffle_colors(colors.clone(), seed);
-            let shuffled_target_colors = self.shuffle_colors(colors, pedersen(seed.try_into().unwrap(), 'target').into());
+            let shuffled_target_colors = self
+                .shuffle_colors(colors, pedersen(seed.try_into().unwrap(), 'target').into());
 
-            let game = Game {
-                player,
-                moves: 0,
-                is_active: true,
-                seed,
-            };
+            let game = Game { player, moves: 0, is_active: true, seed };
 
             let mut i: u8 = 0;
             while i < 5 {
@@ -218,9 +212,16 @@ pub mod ColorStark {
             self.game_state.entry(game_id).write(game);
             self.player_games.entry(player).write(game_id);
             self.next_game_id.write(game_id + 1);
-            
-          
-            self.emit(GameStarted { player, game_id, starting_bottles: shuffled_starting_colors.clone(),target_bottles: shuffled_target_colors.clone(), });
+
+            self
+                .emit(
+                    GameStarted {
+                        player,
+                        game_id,
+                        starting_bottles: shuffled_starting_colors.clone(),
+                        target_bottles: shuffled_target_colors.clone(),
+                    },
+                );
         }
 
         fn make_move(ref self: ContractState, game_id: u256, bottle_from: u8, bottle_to: u8) {
@@ -240,10 +241,23 @@ pub mod ColorStark {
             game.moves += 1;
             self.game_state.entry(game_id).write(game);
 
+            let moves = self.player_moves.entry(player).read();
+            self.player_moves.entry(player).write(moves + 1);
+
             let correct = self.get_correct_bottles(game_id);
-            
-            self.emit(MoveMade { player, game_id, bottle_from, bottle_to, moves: game.moves, correct_bottles: correct });
-            
+
+            self
+                .emit(
+                    MoveMade {
+                        player,
+                        game_id,
+                        bottle_from,
+                        bottle_to,
+                        moves: game.moves,
+                        correct_bottles: correct,
+                    },
+                );
+
             if correct == 5 {
                 let current_points = self.player_points.entry(player).read();
                 let points_earned = 10_u256;
@@ -253,8 +267,17 @@ pub mod ColorStark {
                 game.is_active = false;
                 self.game_state.entry(game_id).write(game);
                 self.player_games.entry(player).write(0);
-                
-                self.emit(GameCompleted { player, game_id, final_moves: game.moves, points_earned, total_points: new_total_points });
+
+                self
+                    .emit(
+                        GameCompleted {
+                            player,
+                            game_id,
+                            final_moves: game.moves,
+                            points_earned,
+                            total_points: new_total_points,
+                        },
+                    );
             }
         }
 
@@ -267,7 +290,7 @@ pub mod ColorStark {
             game.is_active = false;
             self.game_state.entry(game_id).write(game);
             self.player_games.entry(player).write(0);
-            
+
             self.emit(GameEnded { player, game_id, moves: game.moves, was_completed: false });
         }
 
@@ -290,7 +313,13 @@ pub mod ColorStark {
             let mut correct: u8 = 0;
             let mut i: u8 = 0;
             while i < 5 {
-                if self.bottles.entry((game_id, i)).read() == self.target.entry((game_id, i)).read() {
+                if self
+                    .bottles
+                    .entry((game_id, i))
+                    .read() == self
+                    .target
+                    .entry((game_id, i))
+                    .read() {
                     correct += 1;
                 }
                 i += 1;
@@ -312,19 +341,21 @@ pub mod ColorStark {
             let mut i: u256 = 0;
             while i < count {
                 let player = self.players.entry(i).read();
-                result.append(
-                    PlayerData {
-                        address: player,
-                        name: self.player_names.entry(player).read(),
-                        points: self.player_points.entry(player).read(),
-                    },
-                );
+                result
+                    .append(
+                        PlayerData {
+                            address: player,
+                            name: self.player_names.entry(player).read(),
+                            points: self.player_points.entry(player).read(),
+                            moves: self.player_moves.entry(player).read(),
+                        },
+                    );
                 i += 1;
             }
             result
         }
 
-        // New functions for better frontend integration
+        // functions for better frontend integration
         fn get_player_active_game(self: @ContractState, player: ContractAddress) -> u256 {
             self.player_games.entry(player).read()
         }
@@ -346,7 +377,7 @@ pub mod ColorStark {
             let mut history = array![];
             let next_id = self.next_game_id.read();
             let mut i: u256 = 1;
-            
+
             while i < next_id {
                 let game = self.game_state.entry(i).read();
                 if game.player == player {
@@ -354,17 +385,10 @@ pub mod ColorStark {
                 }
                 i += 1;
             }
-            
+
             history
         }
 
-        fn is_owner(self: @ContractState, address: ContractAddress) -> bool {
-            self.ownable.owner() == address
-        }
-
-        fn get_owner(self: @ContractState) -> ContractAddress {
-            self.ownable.owner()
-        }
 
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
             self.ownable.assert_only_owner();
@@ -404,7 +428,9 @@ pub mod ColorStark {
             shuffled
         }
 
-        fn remove_at_index(self: @ContractState, mut arr: Array<Color>, index: u32) -> Array<Color> {
+        fn remove_at_index(
+            self: @ContractState, mut arr: Array<Color>, index: u32,
+        ) -> Array<Color> {
             let mut result = array![];
             let mut i: u32 = 0;
             while i < arr.len() {
