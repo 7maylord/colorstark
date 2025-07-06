@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Wallet, Trophy, Users, Play, RotateCw, Square, Eye, EyeOff } from 'lucide-react';
+import { Play, RotateCw, Square, Eye, EyeOff } from 'lucide-react';
 import BottlesBackground from './BottlesBackground';
 import { useAccount } from "@starknet-react/core";
 import { Contract, shortString, Provider } from "starknet";
 import colorStarkAbi from "../abi/color_stark.json";
+import { useGameCompletedListener } from '../hooks/useGameCompletedListener';
 
-// Mock data for demonstration
-const mockColors = ['Red', 'Blue', 'Green', 'Yellow', 'Purple'];
 const colorMap = {
   Red: 'bg-red-500',
   Blue: 'bg-blue-500', 
@@ -15,29 +14,18 @@ const colorMap = {
   Purple: 'bg-purple-500'
 };
 
-
+type BottleColor = 'Red' | 'Blue' | 'Green' | 'Yellow' | 'Purple';
 
 const ColorStarkGame = () => {
+  const { account, address } = useAccount();
+  const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as string;
+  const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || "";
+  const provider = new Provider({ nodeUrl: rpcUrl });
   const [playerName, setPlayerName] = useState('');
   const [tempName, setTempName] = useState('');
-  const [isInGame, setIsInGame] = useState(false);
-  const [gameId, setGameId] = useState<string | null>(null);
-  const [moves, setMoves] = useState(0);
   const [points, setPoints] = useState(0);
   const [showTarget, setShowTarget] = useState(false);
   const [selectedBottle, setSelectedBottle] = useState<number | null>(null);
-  const [animatingBottles, setAnimatingBottles] = useState(new Set());
-  // Game state
-  const [currentBottles, setCurrentBottles] = useState(['Red', 'Blue', 'Green', 'Yellow', 'Purple']);
-  const [targetBottles, setTargetBottles] = useState(['Purple', 'Yellow', 'Green', 'Blue', 'Red']);
-  const [correctBottles, setCorrectBottles] = useState(0);
-  const { account, address } = useAccount();
-  const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as string;
-  const [txStatus, setTxStatus] = useState<null | 'pending' | 'success' | 'error'>(null);
-  const [txError, setTxError] = useState<string | null>(null);
-  const [contract, setContract] = useState<Contract | null>(null);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  // Add new state for on-chain game
   const [onchainGameId, setOnchainGameId] = useState<string | null>(null);
   const [onchainBottles, setOnchainBottles] = useState<BottleColor[]>([]);
   const [onchainTarget, setOnchainTarget] = useState<BottleColor[]>([]);
@@ -46,53 +34,30 @@ const ColorStarkGame = () => {
   const [onchainCorrect, setOnchainCorrect] = useState<number>(0);
   const [loadingGame, setLoadingGame] = useState<boolean>(false);
   const [txLoading, setTxLoading] = useState<boolean>(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [txStatus, setTxStatus] = useState<null | 'pending' | 'success' | 'error'>(null);
+  const [txError, setTxError] = useState<string | null>(null);
+  const [contract, setContract] = useState<Contract | null>(null);
+  const [showCongrats, setShowCongrats] = useState(false);
 
-
-  const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || "";
-  const provider = new Provider({ nodeUrl: rpcUrl });
-
-  // Shuffle array function
-  const shuffleArray = (array: string[]): string[] => {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  // Helper to parse Color enum from contract
+  function parseColor(colorObj: any): BottleColor {
+    const variant = colorObj?.variant ?? colorObj;
+    if (variant && typeof variant === 'object') {
+      if (variant.Red !== undefined) return 'Red';
+      if (variant.Blue !== undefined) return 'Blue';
+      if (variant.Green !== undefined) return 'Green';
+      if (variant.Yellow !== undefined) return 'Yellow';
+      if (variant.Purple !== undefined) return 'Purple';
     }
-    return shuffled;
-  };
+    return 'Red';
+  }
 
-  // Calculate correct bottles
+  // Fetch both player name and points in parallel
   useEffect(() => {
-    const correct = currentBottles.reduce((acc, bottle, index) => {
-      return acc + (bottle === targetBottles[index] ? 1 : 0);
-    }, 0);
-    setCorrectBottles(correct);
-    // Check if game is won
-    if (correct === 5 && isInGame) {
-      setTimeout(() => {
-        setPoints(prev => prev + 10);
-        setIsInGame(false);
-        setGameId(null);
-        setMoves(0);
-        alert('Congratulations! You won 10 points!');
-      }, 500);
-    }
-  }, [currentBottles, targetBottles, isInGame]);
-
-  // Create contract instance when account changes
-  useEffect(() => {
-    if (account && contractAddress) {
-      setContract(new Contract(colorStarkAbi as any, contractAddress, account));
-    } else {
-      setContract(null);
-    }
-  }, [account, contractAddress]);
-
-  // On mount or address change, try to load the player name from localStorage and set it. If not found, fetch from chain.
-  useEffect(() => {
-   
     if (!address) {
       setPlayerName("");
+      setPoints(0);
       setFetchError(null);
       localStorage.removeItem("colorstark_player_name");
       return;
@@ -105,8 +70,10 @@ const ColorStarkGame = () => {
       (async () => {
         try {
           const readContract = new Contract(colorStarkAbi as any, contractAddress, provider);
-          
-          const nameFelt = await readContract.call("get_player_name", [address]);
+          const [nameFelt, pointsRaw] = await Promise.all([
+            readContract.call("get_player_name", [address]),
+            readContract.call("get_player_points", [address])
+          ]);
           let name = "";
           try {
             if (typeof nameFelt === "bigint") {
@@ -115,7 +82,6 @@ const ColorStarkGame = () => {
               name = shortString.decodeShortString(nameFelt.toString());
             } else if (typeof nameFelt === "string") {
               name = shortString.decodeShortString(nameFelt);
-            } else {
             }
           } catch (decodeErr) {
             console.error("[ColorStarkGame] Error decoding nameFelt:", decodeErr, nameFelt);
@@ -128,56 +94,32 @@ const ColorStarkGame = () => {
             setPlayerName("");
             setFetchError("No name found. Please set your player name.");
           }
+          setPoints(Number(Array.isArray(pointsRaw) ? pointsRaw[0] : pointsRaw));
         } catch (err: any) {
-          console.error('[ColorStarkGame] get_player_name error:', err);
+          console.error('[ColorStarkGame] get_player_name/points error:', err);
           setPlayerName("");
-          setFetchError("Failed to fetch name from chain. Please set your player name.");
+          setPoints(0);
+          setFetchError("Failed to fetch name/points from chain. Please set your player name.");
         }
       })();
     }
   }, [address, contractAddress]);
 
-  // Set name on-chain
-  const setName = async () => {
-    if (!tempName.trim() || !address || !contract) return;
-    try {
-      setTxStatus('pending');
-      setTxError(null);
-      setFetchError(null);
-      const nameFelt = shortString.encodeShortString(tempName.trim());
-      await contract.invoke('set_player_name', [nameFelt]);
-      setPlayerName(tempName);
-      localStorage.setItem("colorstark_player_name", tempName);
-      setTempName('');
-      setTxStatus('success');
-    } catch (err: any) {
-      setTxStatus('error');
-      setTxError(err.message || 'Transaction failed');
-      setFetchError('Failed to set name on chain.');
+  // Create contract instance when account changes
+  useEffect(() => {
+    if (account && contractAddress) {
+      setContract(new Contract(colorStarkAbi as any, contractAddress, account));
+    } else {
+      setContract(null);
     }
-  };
-
-  // Helper to parse Color enum from contract
-  function parseColor(colorObj: any): BottleColor {
-    if (typeof colorObj === 'object' && colorObj !== null) {
-      if (colorObj.Red !== undefined) return 'Red';
-      if (colorObj.Blue !== undefined) return 'Blue';
-      if (colorObj.Green !== undefined) return 'Green';
-      if (colorObj.Yellow !== undefined) return 'Yellow';
-      if (colorObj.Purple !== undefined) return 'Purple';
-    }
-    return 'Red';
-  }
+  }, [account, contractAddress]);
 
   // Fetch on-chain game state
   const fetchOnchainGame = async (gameId: string) => {
     setLoadingGame(true);
     try {
-      console.log("[fetchOnchainGame] Using contractAddress:", contractAddress, "provider:", provider, "gameId:", gameId);
       const readContract = new Contract(colorStarkAbi as any, contractAddress, provider);
       const state = await readContract.call("get_game_state", [gameId]);
-      console.log("[fetchOnchainGame] get_game_state result:", state);
-      // Support both array and object-with-numeric-keys return types
       const stateArr = Array.isArray(state)
         ? state
         : typeof state === "object" && state !== null
@@ -190,12 +132,9 @@ const ColorStarkGame = () => {
         setOnchainTarget(target);
         setOnchainMoves(Number(stateArr[3]));
         setOnchainActive(Boolean(stateArr[4]));
-        // get correct count
         const correct = await readContract.call("get_correct_bottles", [gameId]);
-        console.log("[fetchOnchainGame] get_correct_bottles result:", correct);
         setOnchainCorrect(Number(correct));
       } else {
-        console.warn("[fetchOnchainGame] Unexpected state structure:", state);
         setOnchainBottles([]);
         setOnchainTarget([]);
         setOnchainMoves(0);
@@ -203,7 +142,6 @@ const ColorStarkGame = () => {
         setOnchainCorrect(0);
       }
     } catch (err) {
-      console.error("[ColorStarkGame] fetchOnchainGame error:", err, "contractAddress:", contractAddress, "provider:", provider, "gameId:", gameId);
       setOnchainBottles([]);
       setOnchainTarget([]);
       setOnchainMoves(0);
@@ -229,7 +167,6 @@ const ColorStarkGame = () => {
       setLoadingGame(true);
       try {
         const readContract = new Contract(colorStarkAbi as any, contractAddress, provider);
-        // Ensure address is a string
         const playerAddress = typeof address === 'string' ? address : String(address);
         const gameIdRaw = await readContract.call("get_player_active_game", [playerAddress]);
         let idStr = null;
@@ -269,7 +206,6 @@ const ColorStarkGame = () => {
   // Start game on-chain
   const startGame = async () => {
     if (!contract || !address) return;
-    // Check for existing active game in localStorage
     const localGameId = localStorage.getItem("colorstark_active_game_id");
     if (localGameId && localGameId !== "0") {
       setOnchainGameId(localGameId);
@@ -279,7 +215,6 @@ const ColorStarkGame = () => {
     setTxLoading(true);
     try {
       await contract.invoke("start_game", []);
-      // Wait a bit for tx to be confirmed (or poll for event)
       setTimeout(async () => {
         const readContract = new Contract(colorStarkAbi as any, contractAddress, provider);
         const playerAddress = typeof address === 'string' ? address : String(address);
@@ -303,7 +238,6 @@ const ColorStarkGame = () => {
       }, 3000);
     } catch (err) {
       setTxLoading(false);
-      console.error("[ColorStarkGame] startGame error:", err);
     }
   };
 
@@ -319,12 +253,9 @@ const ColorStarkGame = () => {
       }, 2000);
     } catch (err) {
       setTxLoading(false);
-      console.error("[ColorStarkGame] makeMove error:", err);
     }
   };
 
-  // UI: use onchainBottles/onchainTarget if onchainGameId is set, else show nothing or prompt
-  // Update handleBottleClick to use makeMove if onchainGameId is set
   const handleBottleClick = async (index: number) => {
     if (!onchainActive || txLoading || loadingGame) return;
     if (selectedBottle === null) {
@@ -337,8 +268,23 @@ const ColorStarkGame = () => {
     }
   };
 
- 
-  type BottleColor = 'Red' | 'Blue' | 'Green' | 'Yellow' | 'Purple';
+  // Listen for onchain game completion
+  useGameCompletedListener({
+    contract,
+    playerAddress: address,
+    gameId: onchainGameId,
+    onCompleted: async () => {
+      setShowCongrats(true);
+      if (contract && address) {
+        try {
+          const pts = await contract.call('get_player_points', [address]);
+          setPoints(Number(Array.isArray(pts) ? pts[0] : pts));
+        } catch {}
+      }
+      localStorage.removeItem('colorstark_active_game_id');
+      setTimeout(() => setShowCongrats(false), 5000);
+    }
+  });
 
   const BottleComponent = ({ color, index, isTarget = false, isSelected = false, onClick }: {
     color: BottleColor,
@@ -351,8 +297,7 @@ const ColorStarkGame = () => {
       className={`
         relative w-16 h-32 mx-2 cursor-pointer transition-all duration-300 transform
         ${isSelected ? 'scale-110 ring-4 ring-white ring-opacity-50' : ''}
-        ${animatingBottles.has(index) ? 'scale-125' : ''}
-        ${!isTarget && isInGame ? 'hover:scale-105' : ''}
+        ${!isTarget ? 'hover:scale-105' : ''}
       `}
       onClick={() => onClick && onClick(index)}
     >
@@ -378,6 +323,14 @@ const ColorStarkGame = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white relative overflow-hidden">
+      {showCongrats && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-60">
+          <div className="bg-white rounded-xl shadow-2xl p-8 text-center animate-fade-in">
+            <h2 className="text-2xl font-bold text-green-600 mb-2">Congratulations!</h2>
+            <p className="text-lg text-gray-800">You have earned <span className="font-bold text-purple-600">10 points</span>!</p>
+          </div>
+        </div>
+      )}
       <BottlesBackground />
       <div className="container mx-auto px-4 py-8 relative z-10">
         {/* Header */}
@@ -401,7 +354,24 @@ const ColorStarkGame = () => {
                   disabled={!address || txStatus === 'pending'}
                 />
                 <button
-                  onClick={setName}
+                  onClick={async () => {
+                    if (!tempName.trim() || !address || !contract) return;
+                    try {
+                      setTxStatus('pending');
+                      setTxError(null);
+                      setFetchError(null);
+                      const nameFelt = shortString.encodeShortString(tempName.trim());
+                      await contract.invoke('set_player_name', [nameFelt]);
+                      setPlayerName(tempName);
+                      localStorage.setItem("colorstark_player_name", tempName);
+                      setTempName('');
+                      setTxStatus('success');
+                    } catch (err: any) {
+                      setTxStatus('error');
+                      setTxError(err.message || 'Transaction failed');
+                      setFetchError('Failed to set name on chain.');
+                    }
+                  }}
                   className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors disabled:opacity-50"
                   disabled={!address || txStatus === 'pending' || !tempName.trim()}
                 >
@@ -501,7 +471,6 @@ const ColorStarkGame = () => {
             </div>
           </div>
         )}
-        
       </div>
     </div>
   );
