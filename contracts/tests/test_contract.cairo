@@ -10,7 +10,8 @@ mod tests {
     // Helper function to deploy the contract
     fn deploy_contract() -> IColorStarkDispatcher {
         let contract = declare("ColorStark").unwrap().contract_class();
-        let (contract_address, _) = contract.deploy(@array![]).unwrap();
+        let owner_address = owner();
+        let (contract_address, _) = contract.deploy(@array![owner_address.into()]).unwrap();
         IColorStarkDispatcher { contract_address }
     }
 
