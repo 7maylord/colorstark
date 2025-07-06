@@ -1,11 +1,8 @@
 use core::array::Array;
-use core::pedersen::pedersen;
 use starknet::{ClassHash, ContractAddress};
 
 pub mod types {
     use starknet::ContractAddress;
-    // use core::serde::Serde;
-    // use starknet::Store;
 
     #[derive(Copy, Drop, Serde, starknet::Store, PartialEq)]
     #[allow(starknet::store_no_default_variant)]
@@ -31,7 +28,7 @@ use contracts::types::{Color, PlayerData};
 pub trait IColorStark<TContractState> {
     fn set_player_name(ref self: TContractState, name: felt252);
     fn start_game(ref self: TContractState);
-    fn make_move(ref self: TContractState, game_id: u256, bottle_from: u8, bottle_to: u8);
+    fn submit_result(ref self: TContractState, game_id: u256, final_bottles: Array<Color>, moves: u8);
     fn end_game(ref self: TContractState, game_id: u256);
     fn get_game_state(
         self: @TContractState, game_id: u256,
@@ -106,7 +103,6 @@ pub mod ColorStark {
         // Custom game events
         PlayerNameSet: PlayerNameSet,
         GameStarted: GameStarted,
-        MoveMade: MoveMade,
         GameCompleted: GameCompleted,
         GameEnded: GameEnded,
     }
@@ -126,18 +122,6 @@ pub mod ColorStark {
         game_id: u256,
         starting_bottles: Array<Color>,
         target_bottles: Array<Color>,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct MoveMade {
-        #[key]
-        player: ContractAddress,
-        #[key]
-        game_id: u256,
-        bottle_from: u8,
-        bottle_to: u8,
-        moves: u8,
-        correct_bottles: u8,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -224,61 +208,48 @@ pub mod ColorStark {
                 );
         }
 
-        fn make_move(ref self: ContractState, game_id: u256, bottle_from: u8, bottle_to: u8) {
+        fn submit_result(ref self: ContractState, game_id: u256, final_bottles: Array<Color>, moves: u8) {
             let player = get_caller_address();
-            let game = self.game_state.entry(game_id).read();
+            let mut game = self.game_state.entry(game_id).read();
             assert(game.is_active, 'Game not active');
             assert(game.player == player, 'Not your game');
-            assert(bottle_from < 5 && bottle_to < 5, 'Invalid bottle index');
-            assert(bottle_from != bottle_to, 'Cannot swap same bottle');
 
-            let color_from = self.bottles.entry((game_id, bottle_from)).read();
-            let color_to = self.bottles.entry((game_id, bottle_to)).read();
-            self.bottles.entry((game_id, bottle_from)).write(color_to);
-            self.bottles.entry((game_id, bottle_to)).write(color_from);
-
-            let mut game = game;
-            game.moves += 1;
-            self.game_state.entry(game_id).write(game);
-
-            let moves = self.player_moves.entry(player).read();
-            self.player_moves.entry(player).write(moves + 1);
-
-            let correct = self.get_correct_bottles(game_id);
-
-            self
-                .emit(
-                    MoveMade {
-                        player,
-                        game_id,
-                        bottle_from,
-                        bottle_to,
-                        moves: game.moves,
-                        correct_bottles: correct,
-                    },
-                );
-
-            if correct == 5 {
-                let current_points = self.player_points.entry(player).read();
-                let points_earned = 10_u256;
-                let new_total_points = current_points + points_earned;
-                self.player_points.entry(player).write(new_total_points);
-                let mut game = self.game_state.entry(game_id).read();
-                game.is_active = false;
-                self.game_state.entry(game_id).write(game);
-                self.player_games.entry(player).write(0);
-
-                self
-                    .emit(
-                        GameCompleted {
-                            player,
-                            game_id,
-                            final_moves: game.moves,
-                            points_earned,
-                            total_points: new_total_points,
-                        },
-                    );
+            // Build the stored target array
+            let mut target = array![];
+            let mut i: u8 = 0;
+            while i < 5 {
+                target.append(self.target.entry((game_id, i)).read());
+                i += 1;
             }
+
+            // Call verify_completion
+            let completed = self.verify_completion(target, final_bottles);
+            assert!(completed, "Final bottles do not match target");
+
+            // update game movesa  and state
+            game.moves = moves;
+            game.is_active = false;
+            self.game_state.entry(game_id).write(game);
+            self.player_games.entry(player).write(0);
+
+            // Award points and mark game as completed
+            let current_points = self.player_points.entry(player).read();
+            let points_earned = 10_u256;
+            let new_total_points = current_points + points_earned;
+            self.player_points.entry(player).write(new_total_points);
+            
+
+            // Update player total moves
+            let prev_moves = self.player_moves.entry(player).read();
+            self.player_moves.entry(player).write(prev_moves + moves.into());
+
+            self.emit(GameCompleted {
+                player,
+                game_id,
+                final_moves: moves,
+                points_earned,
+                total_points: new_total_points,
+            });
         }
 
         fn end_game(ref self: ContractState, game_id: u256) {
@@ -441,5 +412,23 @@ pub mod ColorStark {
             }
             result
         }
-    }
+
+        fn verify_completion(
+            self: @ContractState,
+            target: Array<Color>,
+            final_bottles: Array<Color>
+        ) -> bool {
+            if target.len() != final_bottles.len() {
+                return false;
+            }
+            let mut i: u32 = 0;
+            while i < target.len() {
+                if *target.at(i) != *final_bottles.at(i) {
+                    return false;
+                }
+                i += 1;
+            }
+            true
+        }
+    }      
 }
