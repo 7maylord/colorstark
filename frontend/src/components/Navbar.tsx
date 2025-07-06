@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import WalletConnector from './WalletConnector';
+import Link from "next/link";
+import WalletConnectButton from "./WalletConnectButton";
 
 const Logo = () => (
   <Link href="/" className="flex items-center space-x-3 group">
@@ -20,7 +20,7 @@ interface NavbarProps {
   className?: string;
 }
 
-const Navbar = ({ className = '' }: NavbarProps) => {
+const Navbar = ({ className = "" }: NavbarProps) => {
   return (
     <div className={`
       relative backdrop-blur-xl bg-gradient-to-r from-purple-900/30 via-black/20 to-blue-900/30 
@@ -110,7 +110,7 @@ const Navbar = ({ className = '' }: NavbarProps) => {
             </ul>
           </div>
           
-          <WalletConnector />
+          <WalletConnectButton />
         </div>
       </div>
     </div>

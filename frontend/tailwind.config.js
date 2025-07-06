@@ -64,56 +64,35 @@ module.exports = {
         'gradient-conic':
           'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
       },
-    },
-  },
-  plugins: [require('daisyui')],
-  daisyui: {
-    themes: [
-      {
-        light: {
-          "primary": "#6d28d9",
-          "primary-focus": "#5b21b6",
-          "primary-content": "#ffffff",
-          "secondary": "#03A9F4",
-          "secondary-focus": "#0398DC",
-          "secondary-content": "#ffffff",
-          "accent": "#7c47ff",
-          "accent-focus": "#6d28d9",
-          "accent-content": "#ffffff",
-          "neutral": "#3d4451",
-          "neutral-focus": "#2a2e37",
-          "neutral-content": "#ffffff",
-          "base-100": "#ffffff",
-          "base-200": "#f9fafb",
-          "base-300": "#d1d5db",
-          "base-content": "#1f2937",
-          "info": "#2094f3",
-          "success": "#009485",
-          "warning": "#ff9900",
-          "error": "#ff5724",
-          '.btn-wallet': {
-            'background-color': '#6d28d9',
-            'border-color': '#6d28d9',
-            color: '#fff',
-          },
-          '.btn-wallet:hover': {
-            'background-color': '#5b21b6',
-            'border-color': '#5b21b6',
-            color: '#fff',
-          },
-          '.btn-game': {
-            'background-color': '#03A9F4',
-            'border-color': '#03A9F4',
-            color: '#fff',
-          },
-          '.btn-game:hover': {
-            'background-color': '#0398DC',
-            'border-color': '#0398DC',
-            color: '#fff',
-          },
+      keyframes: {
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-20px)' },
+        },
+        'float-delayed': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-30px)' },
+        },
+        'float-slow': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-15px)' },
+        },
+        twinkle: {
+          '0%, 100%': { opacity: '0.3' },
+          '50%': { opacity: '1' },
+        },
+        'twinkle-delayed': {
+          '0%, 100%': { opacity: '0.3' },
+          '50%': { opacity: '1' },
         },
       },
-      'dark',
-    ],
+      animation: {
+        float: 'float 4s ease-in-out infinite',
+        'float-delayed': 'float-delayed 5s ease-in-out infinite',
+        'float-slow': 'float-slow 6s ease-in-out infinite',
+        twinkle: 'twinkle 2s ease-in-out infinite',
+        'twinkle-delayed': 'twinkle-delayed 3s ease-in-out infinite',
+      },
+    },
   },
 }; 

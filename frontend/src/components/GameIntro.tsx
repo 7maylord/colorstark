@@ -1,19 +1,15 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import WalletConnector from './WalletConnector';
+import { useAccount } from "@starknet-react/core";
+import WalletConnectButton from "./WalletConnectButton";
+import Link from "next/link";
 
-interface GameIntroProps {
-  onStartGame: () => void;
-  isLoadingPlayer: boolean;
-  walletConnected: boolean;
-}
-
-export default function GameIntro({ onStartGame, isLoadingPlayer, walletConnected }: GameIntroProps) {
-  const [hoveredButton, setHoveredButton] = useState(false);
+export default function GameIntro() {
+  const { address } = useAccount();
+  const walletConnected = !!address;
 
   return (
-    <div className="text-center max-w-4xl mx-auto">
+    <div className="w-full max-w-4xl mx-auto px-4 py-12 flex flex-col items-center">
       {/* Game Logo/Title */}
       <div className="mb-8 animate-fade-in">
         <div className="flex items-center justify-center gap-6 mb-6">
@@ -30,41 +26,26 @@ export default function GameIntro({ onStartGame, isLoadingPlayer, walletConnecte
       {/* Action Buttons */}
       <div className="space-y-6 animate-slide-up-delayed">
         {!walletConnected ? (
-          <div className="space-y-4">
+          <div className="space-y-4 flex flex-col items-center">
             <p className="flex justify-center text-gray-400 text-lg">Connect your Starknet wallet to begin</p>
+            <WalletConnectButton />
           </div>
         ) : (
-          <div className="space-y-4">
-            <button
-              onClick={onStartGame}
-              disabled={isLoadingPlayer}
-              onMouseEnter={() => setHoveredButton(true)}
-              onMouseLeave={() => setHoveredButton(false)}
-              className={`
-                relative px-12 py-4 text-2xl font-bold rounded-xl 
-                bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 
-                hover:from-purple-500 hover:via-pink-500 hover:to-red-500
-                text-white shadow-2xl border-2 border-white/20
-                transform transition-all duration-300 
-                ${hoveredButton ? 'scale-105 shadow-purple-500/25' : 'scale-100'}
-                ${isLoadingPlayer ? 'opacity-75 cursor-not-allowed' : 'hover:shadow-purple-500/50'}
-                disabled:transform-none disabled:hover:from-purple-600 disabled:hover:via-pink-600 disabled:hover:to-red-600
-              `}
-            >
-              {isLoadingPlayer ? (
-                <div className="flex items-center space-x-3">
-                  <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Loading Player...</span>
-                </div>
-              ) : (
-                <>
-                  <span className="relative z-10">START GAME</span>
-                  {hoveredButton && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 rounded-xl blur-xl opacity-75 animate-pulse"></div>
-                  )}
-                </>
-              )}
-            </button>
+          <div className="space-y-4 flex flex-col items-center">
+            <Link href="/game">
+              <button
+                className="
+                  relative px-12 py-4 text-2xl font-bold rounded-xl 
+                  bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 
+                  hover:from-purple-500 hover:via-pink-500 hover:to-red-500
+                  text-white shadow-2xl border-2 border-white/20
+                  transform transition-all duration-300 
+                  scale-100 hover:scale-105 hover:shadow-purple-500/50
+                "
+              >
+                <span className="relative z-10">GO TO GAME</span>
+              </button>
+            </Link>
           </div>
         )}
       </div>
@@ -77,7 +58,6 @@ export default function GameIntro({ onStartGame, isLoadingPlayer, walletConnecte
         <p className="text-lg text-gray-400 mb-8">
           Built on Starknet • Play to Earn • Compete Globally
         </p>
-        
         {/* Game Features */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-purple-500/50 transition-all duration-300">
@@ -87,7 +67,6 @@ export default function GameIntro({ onStartGame, isLoadingPlayer, walletConnecte
             <h3 className="text-white font-semibold mb-2">Pattern Matching</h3>
             <p className="text-gray-400 text-sm">Match bottle sequences to advance through challenging levels</p>
           </div>
-          
           <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-blue-500/50 transition-all duration-300">
             <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mx-auto mb-4 flex items-center justify-center">
               🏆
@@ -95,7 +74,6 @@ export default function GameIntro({ onStartGame, isLoadingPlayer, walletConnecte
             <h3 className="text-white font-semibold mb-2">Global Rankings</h3>
             <p className="text-gray-400 text-sm">Compete with players worldwide on the leaderboard</p>
           </div>
-          
           <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-green-500/50 transition-all duration-300">
             <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-teal-500 rounded-full mx-auto mb-4 flex items-center justify-center">
               💎
