@@ -1,17 +1,70 @@
 "use client";
 
-import { Trophy } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Contract, Provider, shortString } from "starknet";
 import BottlesBackground from "../../components/BottlesBackground";
+import { Trophy } from "lucide-react";
+import colorStarkAbi from "../../abi/color_stark.json";
 
-const mockLeaderboard = [
-  { name: 'Alice', points: 150, address: '0x1234...5678' },
-  { name: 'Bob', points: 120, address: '0x2345...6789' },
-  { name: 'Charlie', points: 95, address: '0x3456...7890' },
-  { name: 'Diana', points: 80, address: '0x4567...8901' },
-  { name: 'Eve', points: 65, address: '0x5678...9012' }
-];
+// Helper to format contract address as 0x-prefixed hex string
+function formatAddress(addr: any) {
+  let hex = typeof addr === 'bigint'
+    ? '0x' + addr.toString(16)
+    : typeof addr === 'string' && !addr.startsWith('0x')
+      ? '0x' + BigInt(addr).toString(16)
+      : String(addr);
+  return `${hex.slice(0, 8)}...${hex.slice(-6)}`;
+}
 
 export default function LeaderboardPage() {
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as string;
+  const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || "";
+  const provider = new Provider({ nodeUrl: rpcUrl });
+
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      try {
+        const contract = new Contract(colorStarkAbi as any, contractAddress, provider);
+        const playersRaw = await contract.call("get_all_player_points", []);
+        // Defensive: handle both array and object return
+        const playersArr = Array.isArray(playersRaw)
+          ? playersRaw
+          : typeof playersRaw === "object" && playersRaw !== null
+            ? Object.values(playersRaw)
+            : [];
+        const leaderboardData = playersArr.map((player: any) => {
+          // Defensive: handle both array/object for player
+          const p = Array.isArray(player) ? player : Object.values(player);
+          // p: [address, name, points, moves]
+          let name = "";
+          try {
+            if (typeof p[1] === "bigint") {
+              name = shortString.decodeShortString(p[1].toString());
+            } else if (typeof p[1] === "string") {
+              name = shortString.decodeShortString(p[1]);
+            } else if (p[1] && typeof p[1] === "object" && "toString" in p[1]) {
+              name = shortString.decodeShortString(p[1].toString());
+            }
+          } catch {
+            name = "";
+          }
+          return {
+            address: p[0],
+            name,
+            points: Number(typeof p[2] === 'bigint' ? p[2].toString() : p[2]),
+            moves: Number(typeof p[3] === 'bigint' ? p[3].toString() : p[3]),
+          };
+        });
+        leaderboardData.sort((a, b) => b.points - a.points || a.moves - b.moves);
+        setLeaderboard(leaderboardData);
+      } catch (err) {
+        setLeaderboard([]);
+      }
+    };
+    fetchLeaderboard();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white relative overflow-hidden">
       <BottlesBackground />
@@ -23,9 +76,15 @@ export default function LeaderboardPage() {
               Leaderboard
             </h2>
             <div className="space-y-3">
-              {mockLeaderboard.map((player, index) => (
+              <div className="flex items-center justify-between px-3 pb-2 border-b border-white/20 text-sm font-semibold">
+                <span className="w-8 text-center">#</span>
+                <span className="flex-1">Name</span>
+                <span className="w-32 text-right">Points</span>
+                <span className="w-24 text-right">Moves</span>
+              </div>
+              {leaderboard.map((player, index) => (
                 <div
-                  key={index}
+                  key={String(player.address) + index}
                   className={
                     `flex items-center justify-between p-3 rounded-lg transition-all duration-200 ` +
                     (index === 0 ? 'bg-gradient-to-r from-yellow-600 to-orange-600' : 
@@ -34,19 +93,13 @@ export default function LeaderboardPage() {
                       'bg-white bg-opacity-10')
                   }
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold w-8 text-center">
-                      {index + 1}
-                    </span>
-                    <div>
-                      <p className="font-semibold">{player.name}</p>
-                      <p className="text-xs text-gray-300">{player.address}</p>
-                    </div>
+                  <span className="text-lg font-bold w-8 text-center">{index + 1}</span>
+                  <div className="flex-1">
+                    <p className="font-semibold">{player.name || 'Unnamed'}</p>
+                    <p className="text-xs text-gray-300">{formatAddress(player.address)}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold">{player.points}</p>
-                    <p className="text-xs text-gray-300">points</p>
-                  </div>
+                  <span className="w-32 text-right font-bold">{player.points}</span>
+                  <span className="w-24 text-right font-mono">{player.moves}</span>
                 </div>
               ))}
             </div>
