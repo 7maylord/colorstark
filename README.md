@@ -1,15 +1,34 @@
 # ColorStark Game
 
-The ColorStark Game is a decentralized, on-chain game built on StarkNet, where players match colored bottles to a target configuration to earn points. Players can connect their StarkNet wallet, set a display name, start a game, swap bottles to match the target, and compete on a global leaderboard. The game uses a Cairo smart contract for game logic and a Next.js frontend with TypeScript and Starknet-React for a seamless user experience.
+The ColorStark Game is a decentralized, on-chain game built on StarkNet, where players match colored bottles to a target configuration to earn points. Players connect their StarkNet wallet, set a display name, start a game, swap bottles off-chain to match the target, and submit their solution to compete on a global leaderboard. The game uses a Cairo smart contract for game logic and a Next.js frontend with TypeScript and Starknet-React for a seamless user experience.
 
 ## Features
 
 - **Wallet Integration**: Connect with Argent X or Braavos to interact with the game on StarkNet.
-- **Player Profiles**: Set a display name and track points earned from winning games.
-- **Gameplay**: Start a game with 5 colored bottles (Red, Blue, Green, Yellow, Purple), swap bottles to match a target configuration, and earn 10 points for a complete match.
-- **Leaderboard**: View all players' names and points, sorted by highest score.
+- **Player Profiles**: Set a display name and track points and moves earned from winning games.
+- **Gameplay**: Start a game with 5 colored bottles (Red, Blue, Green, Yellow, Purple), swap bottles off-chain to match a target configuration, and earn 10 points for a complete match by submitting your result on-chain.
+- **Leaderboard**: View all players' names, points, and moves, sorted by highest score.
 - **Responsive UI**: Built with Next.js and Tailwind CSS for a modern, user-friendly interface.
 - **Type Safety**: Uses TypeScript for robust frontend development.
+- **Rich Events**: The contract emits events for all major actions (name set, game started, completed, ended) for analytics and off-chain tracking.
+
+## How It Works
+
+1. **Set Name**: Enter a name (max 31 chars) and set it on-chain.
+2. **Start Game**: Start a new game; the contract generates a random target and shuffled bottles.
+3. **Swap Bottles**: Swap bottles off-chain in the UI to match the target configuration.
+4. **Submit Result**: When you think you have the correct arrangement, submit your result on-chain. The contract verifies your solution and awards points if correct.
+5. **End Game**: You can end a game early on-chain (no points awarded).
+6. **Leaderboard**: View your progress and compare with others.
+
+## Example Gameplay
+
+1. Player sets their name and starts a game.
+2. The contract emits a `GameStarted` event and provides a random target and shuffled bottles.
+3. The player swaps bottles in the UI until the arrangement matches the target.
+4. The player submits the result. If correct, the contract emits a `GameCompleted` event and awards 10 points.
+5. The player can end a game early with the "End Game" button, which calls the contract and emits a `GameEnded` event.
+6. All actions are reflected in the leaderboard and event logs.
 
 ## Project Structure
 
@@ -22,29 +41,12 @@ colorstark/
 │       └── test_contract.cairo
 ├── frontend/
 │   ├── public/
-│   │   ├── file.svg
-│   │   ├── globe.svg
-│   │   ├── next.svg
-│   │   ├── vercel.svg
-│   │   └── window.svg
 │   ├── src/
 │   │   ├── abi/
-│   │   │   └── color_stark.json
 │   │   ├── app/
-│   │   │   ├── favicon.ico
-│   │   │   ├── globals.css
-│   │   │   ├── layout.tsx
-│   │   │   └── page.tsx
 │   │   ├── components/
-│   │   │   ├── GameBoard.tsx
-│   │   │   ├── GameControls.tsx
-│   │   │   ├── Leaderboard.tsx
-│   │   │   ├── PlayerInfo.tsx
-│   │   │   └── WalletConnector.tsx
 │   │   ├── hooks/
-│   │   │   └── useStarknet.ts
 │   │   └── utils/
-│   │       └── index.ts
 │   └── tsconfig.json
 ├── .gitignore
 └── README.md
@@ -81,12 +83,6 @@ cd frontend
 yarn install
 ```
 
-This installs:
-- `@starknet-react/core`, `@starknet-react/chains`, `starknet` for StarkNet integration.
-- `next`, `react`, `react-dom` for the frontend.
-- `tailwindcss`, `postcss`, `autoprefixer` for styling.
-- TypeScript and related type definitions.
-
 ### 3. Compile the Smart Contract
 
 Navigate to the contract directory and compile the Cairo contract using Scarb:
@@ -111,13 +107,16 @@ starknet-devnet
 Declare and deploy the contract using Starknet Foundry's sncast:
 
 ```bash
-# Declare the contract
+# Declare the contract, note the class hash returned
 sncast --url http://localhost:5050 declare --contract-name ColorStark
-# Deploy the contract
-sncast --url http://localhost:5050 deploy --class-hash <CLASS_HASH>
+# Deploy the contract (replace <CLASS_HASH> and <OWNER_ADDRESS> with your values) Note contract address returned
+sncast --url http://localhost:5050 deploy --class-hash <CLASS_HASH> --constructor-args <OWNER_ADDRESS>
 ```
 
-Note the class hash and contract address returned.
+- `<OWNER_ADDRESS>` should be the StarkNet address that will have admin/upgrade rights for the contract (typically your wallet address).
+- The constructor requires this owner address as a parameter.
+
+.
 
 #### Option 2: Sepolia Testnet
 
@@ -131,15 +130,19 @@ export STARKNET_KEYSTORE=~/.starknet_accounts/starknet_open_zeppelin_key.json
 Declare and deploy:
 
 ```bash
-sncast --url https://api.starknet.io/v0_7_1 declare --contract-name ColorBottleGame
-sncast --url https://api.starknet.io/v0_7_1 deploy --class-hash <CLASS_HASH>
+# Declare the contract, note the class hash returned
+sncast --url https://api.starknet.io/v0_7_1 declare --contract-name ColorStark
+# Deploy the contract (replace <CLASS_HASH> and <OWNER_ADDRESS> with your values) Note contract address returned
+sncast --url https://api.starknet.io/v0_7_1 deploy --class-hash <CLASS_HASH> --constructor-args <OWNER_ADDRESS>
 ```
+
+- `<OWNER_ADDRESS>` should be the StarkNet address that will have admin/upgrade rights for the contract.
 
 ### 5. Update Contract Address
 
-Update the contract address in `env` with the deployed contract address:
+Update the contract address in your `.env` file:
 
-```ts
+```
 NEXT_PUBLIC_CONTRACT_ADDRESS= 'YOUR_DEPLOYED_CONTRACT_ADDRESS'
 ```
 
@@ -163,12 +166,12 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - Click "Connect Wallet" to link your wallet.
 
 ### Interact with the Game
-- **Set Name**: Enter a name (e.g., "Alice") and click "Set Name" to update your leaderboard profile.
-- **Start Game**: Click "Start Game" to initialize a game with 5 colored bottles (Red, Blue, Green, Yellow, Purple) and a target configuration.
-- **Make Moves**: Click two bottles to swap their positions, aiming to match the target. Track moves and correct bottles (e.g., "3/5").
-- **Win Game**: Match all 5 bottles to earn 10 points, automatically ending the game.
-- **End Game**: Click "End Game" to manually terminate an active game.
-- **Leaderboard**: View all players' names and points, sorted by highest score.
+- **Set Name**: Enter a name (max 31 chars) and set it on-chain.
+- **Start Game**: Click "Start Game" to initialize a game with 5 colored bottles and a target configuration.
+- **Swap Bottles**: Click two bottles to swap their positions off-chain, aiming to match the target.
+- **Submit Result**: Click "Submit Result" to send your solution to the contract. If correct, you earn 10 points and the game ends.
+- **End Game**: Click "End Game" to manually terminate an active game on-chain (no points awarded).
+- **Leaderboard**: View all players' names, points, and moves, sorted by highest score.
 
 ## Building for Production
 

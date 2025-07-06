@@ -60,6 +60,7 @@ export default function WalletConnectButton() {
     disconnect();
     localStorage.removeItem("colorstark_player_name");
     localStorage.removeItem("colorstark_active_game_id");
+    localStorage.removeItem("colorstark_player_points");
     setDropdownOpen(false);
     router.push('/');
   };
@@ -83,9 +84,11 @@ export default function WalletConnectButton() {
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setDropdownOpen((open) => !open)}
-          className="relative px-4 py-2.5 rounded-xl font-medium text-sm bg-gradient-to-r from-starknet-600 to-purple-600 hover:from-starknet-500 hover:to-purple-500 text-white shadow-lg hover:shadow-purple-500/25 border border-white/20 hover:border-white/30 backdrop-blur-sm transition-all duration-300 hover:scale-105 active:scale-95 flex items-center space-x-2 group overflow-hidden"
+          className="relative px-4 py-2.5 rounded-xl font-medium text-sm bg-gradient-to-r from-starknet-600 to-purple-600 hover:from-starknet-500 hover:to-purple-500 text-white shadow-lg hover:shadow-purple-500/25 border border-white/20 hover:border-white/30 backdrop-blur-sm transition-all duration-300 hover:scale-105 active:scale-95 flex items-center space-x-2 group overflow-hidden
+          sm:px-4 sm:py-2.5
+          px-3 py-2 text-xs min-w-0 max-w-full w-full sm:w-auto"
         >
-          <span className="font-mono">{shortened}</span>
+          <span className="font-mono truncate max-w-[90px] sm:max-w-none">{shortened}</span>
           {justCopied ? (
             <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -101,7 +104,7 @@ export default function WalletConnectButton() {
           </svg>
         </button>
         {dropdownOpen && (
-          <div className="absolute right-0 mt-2 w-72 z-50 bg-black/90 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl shadow-purple-500/20 animate-fade-in p-4">
+          <div className="absolute right-0 mt-2 w-72 max-w-[90vw] z-50 bg-black/90 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl shadow-purple-500/20 animate-fade-in p-4 sm:w-72">
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <span className="text-gray-400 text-xs">Wallet Address</span>
@@ -141,12 +144,14 @@ export default function WalletConnectButton() {
     <>
       <button
         onClick={() => setIsModalOpen(true)}
-        className="relative px-6 py-2.5 rounded-xl font-medium text-sm bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-500 hover:via-pink-500 hover:to-blue-500 text-white shadow-lg hover:shadow-purple-500/25 border border-white/20 hover:border-white/30 backdrop-blur-sm transition-all duration-300 hover:scale-105 active:scale-95 flex items-center space-x-2 group overflow-hidden"
+        className="relative px-6 py-2.5 rounded-xl font-medium text-sm bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-500 hover:via-pink-500 hover:to-blue-500 text-white shadow-lg hover:shadow-purple-500/25 border border-white/20 hover:border-white/30 backdrop-blur-sm transition-all duration-300 hover:scale-105 active:scale-95 flex items-center space-x-2 group overflow-hidden
+        sm:px-6 sm:py-2.5
+        px-3 py-2 text-xs min-w-0 max-w-full w-full sm:w-auto"
       >
-        <svg className="relative z-10 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="relative z-10 w-5 h-5 sm:w-5 sm:h-5 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
         </svg>
-        <span className="relative z-10">Connect Wallet</span>
+        <span className="relative z-10 truncate max-w-[90px] sm:max-w-none">Connect Wallet</span>
       </button>
       {isModalOpen && (
         <div 
@@ -166,7 +171,7 @@ export default function WalletConnectButton() {
           }}
           onClick={e => { if (e.target === e.currentTarget) setIsModalOpen(false); }}
         >
-          <div className="bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 rounded-2xl border border-white/20 shadow-2xl max-w-md w-full overflow-hidden animate-slide-up" style={{ maxWidth: '400px', width: '100%' }}>
+          <div className="bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 rounded-2xl border border-white/20 shadow-2xl max-w-md w-full overflow-hidden animate-slide-up max-w-[95vw] sm:max-w-md" style={{ maxWidth: '400px', width: '100%' }}>
             <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-6 text-center relative">
               <button
                 onClick={() => setIsModalOpen(false)}

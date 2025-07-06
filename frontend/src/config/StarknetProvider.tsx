@@ -12,7 +12,14 @@ const connectors = [
   new InjectedConnector({
     options: { id: "braavos", name: "Braavos" },
   }),
+  new InjectedConnector({ 
+    options: { id: 'keplr', name: 'Keplr' } 
+  }),
+  new InjectedConnector({
+    options: { id: "ledger", name: "Ledger" },
+  }),
 ];
+
 
 export default function StarknetProvider({ children }: { children: React.ReactNode }) {
   return (

@@ -6,15 +6,11 @@ The `ColorStark` contract is a gamified application built in Cairo 1.0 on Starkn
 
 * Register with a name
 * Start a color-matching game
-* Swap colors to match a target configuration
-* Earn points for solving the puzzle
-* View their scores and rankings
+* Swap colors off-chain to match a target configuration
+* Submit their solution to earn points
+* View scores, rankings, and game history
 * End the game manually if needed
 * Upgrade the contract logic using OpenZeppelin components
-
-### Latest Updates
-
-**Frontend Integration Improvements**: Added dedicated functions for efficient game state management, eliminating the need for frontend applications to iterate through game IDs to find active games. These improvements provide instant game loading and seamless user experience.
 
 ---
 
@@ -26,19 +22,11 @@ use core::array::Array;
 use core::pedersen::pedersen;
 ```
 
-* `ContractAddress`: Starknet address type.
-* `ClassHash`: For contract upgrade logic.
-* `Array`: Dynamic array from Cairo core.
-* `pedersen`: Hashing function used for deterministic randomization.
-
 ---
 
 ## Module: `types`
 
-Defines custom types:
-
 ### `Color` Enum
-
 ```rust
 #[derive(Copy, Drop, Serde, starknet::Store, PartialEq)]
 #[allow(starknet::store_no_default_variant)]
@@ -51,21 +39,16 @@ pub enum Color {
 }
 ```
 
-* Enum representing possible bottle colors.
-* Implements traits for storage, serialization, copying, etc.
-
 ### `PlayerData` Struct
-
 ```rust
 #[derive(Copy, Drop, Serde, starknet::Store)]
 pub struct PlayerData {
     pub address: ContractAddress,
     pub name: felt252,
     pub points: u256,
+    pub moves: u256,
 }
 ```
-
-* Contains metadata for each player.
 
 ---
 
@@ -73,35 +56,78 @@ pub struct PlayerData {
 
 Defines public contract methods:
 
-### Core Game Functions
-* `set_player_name` - Register player with a name
-* `start_game` - Initialize a new color-matching game
-* `make_move` - Swap bottle positions during gameplay
-* `end_game` - Manually terminate an active game
-
-### Game State Queries
-* `get_game_state` - Retrieve complete game information
-* `get_correct_bottles` - Count bottles in correct positions
-
-### Player Data Functions
-* `get_player_points` - Get player's total score
-* `get_player_name` - Retrieve player's registered name
-* `get_all_player_points` - Get leaderboard data
-
-### Frontend Integration Functions
-* `get_player_active_game` - Get player's current active game ID
-* `get_next_game_id` - Get the next game ID to be assigned
-* `has_active_game` - Check if player has an active game (boolean)
-* `get_player_game_history` - Get all game IDs for a specific player
-
-### Admin Functions
-* `upgrade` - Upgrade contract implementation
+- `set_player_name(ref self, name: felt252)`
+- `start_game(ref self)`
+- `submit_result(ref self, game_id: u256, final_bottles: Array<u8>, moves: u8)`
+- `end_game(ref self, game_id: u256)`
+- `get_game_state(self, game_id: u256) -> (ContractAddress, Array<Color>, Array<Color>, u8, bool)`
+- `get_correct_bottles(self, game_id: u256) -> u8`
+- `get_player_points(self, player: ContractAddress) -> u256`
+- `get_player_name(self, player: ContractAddress) -> felt252`
+- `get_all_player_points(self) -> Array<PlayerData>`
+- `get_player_active_game(self, player: ContractAddress) -> u256`
+- `get_next_game_id(self) -> u256`
+- `has_active_game(self, player: ContractAddress) -> bool`
+- `get_player_game_history(self, player: ContractAddress) -> Array<u256>`
+- `upgrade(ref self, new_class_hash: ClassHash)`
 
 ---
 
-## Contract Definition: `ColorStark`
+## Events
 
-### Storage
+The contract emits several events for off-chain tracking and analytics:
+
+```rust
+#[event]
+enum Event {
+    #[flat]
+    UpgradeableEvent: UpgradeableComponent::Event,
+    #[flat]
+    OwnableEvent: OwnableComponent::Event,
+    PlayerNameSet: PlayerNameSet,
+    GameStarted: GameStarted,
+    GameCompleted: GameCompleted,
+    GameEnded: GameEnded,
+}
+
+struct PlayerNameSet {
+    #[key]
+    player: ContractAddress,
+    name: felt252,
+}
+
+struct GameStarted {
+    #[key]
+    player: ContractAddress,
+    #[key]
+    game_id: u256,
+    starting_bottles: Array<Color>,
+    target_bottles: Array<Color>,
+}
+
+struct GameCompleted {
+    #[key]
+    player: ContractAddress,
+    #[key]
+    game_id: u256,
+    final_moves: u8,
+    points_earned: u256,
+    total_points: u256,
+}
+
+struct GameEnded {
+    #[key]
+    player: ContractAddress,
+    #[key]
+    game_id: u256,
+    moves: u8,
+    was_completed: bool,
+}
+```
+
+---
+
+## Storage
 
 ```rust
 #[storage]
@@ -115,18 +141,16 @@ struct Storage {
     next_game_id: u256,
     bottles: Map<(u256, u8), Color>,
     target: Map<(u256, u8), Color>,
-    
+    player_moves: Map<ContractAddress, u256>,
     #[substorage(v0)]
     upgradeable: UpgradeableComponent::Storage,
     #[substorage(v0)]
     ownable: OwnableComponent::Storage,
 }
 ```
-
-* Stores games, players, colors, scores, and OpenZeppelin subcomponents.
+- `player_moves` tracks the total moves made by each player for leaderboard/statistics.
 
 ### Game Struct
-
 ```rust
 #[derive(Copy, Drop, Serde, starknet::Store)]
 struct Game {
@@ -137,177 +161,69 @@ struct Game {
 }
 ```
 
-* Tracks state for an individual game.
+---
 
-### Constructor
+## Constructor
 
 ```rust
 #[constructor]
-fn constructor(ref self: ContractState) {
-    let owner = get_caller_address();
+fn constructor(ref self: ContractState, owner: ContractAddress) {
     self.ownable.initializer(owner);
     self.next_game_id.write(1);
     self.player_count.write(0);
 }
 ```
 
-* Initializes the contract owner, and sets game and player counters.
-
 ---
 
-## Contract Implementation: `ColorStarkImpl`
+## Game Logic
 
-### `set_player_name`
-
-* Saves player name
-* Adds player to leaderboard if new
-
-### `start_game`
-
-* Validates player doesn't already have an active game using `has_active_game()`
-* Initializes game with random color order using Pedersen hashing
-* Stores both the game and target configurations
-
-### `make_move`
-
-* Swaps bottle colors
-* Checks if player has won
-* If complete, awards 10 points and ends the game
-
-### `end_game`
-
-* Allows players to manually end their game
-
-### `get_game_state`
-
-* Returns player, current bottles, target, move count, and status
-
-### `get_correct_bottles`
-
-* Counts how many bottles match the target
-
-### `get_player_points` and `get_player_name`
-
-* Return player's points or name
-
-### `get_all_player_points`
-
-* Builds leaderboard from all registered players
-
-### `upgrade`
-
-* Allows the contract owner to upgrade contract class
-
----
-
-## New Frontend Integration Functions
-
-These functions were added to streamline frontend integration and eliminate the need for inefficient game ID discovery patterns.
-
-### `get_player_active_game`
-
-```rust
-fn get_player_active_game(self: @ContractState, player: ContractAddress) -> u256
-```
-
-* **Purpose**: Directly retrieve a player's current active game ID
-* **Returns**: Game ID as u256 (returns 0 if no active game)
-* **Benefits**: Eliminates need to iterate through all game IDs to find active games
-* **Usage**: Frontend can instantly load the current game state
-
-### `get_next_game_id`
-
-```rust
-fn get_next_game_id(self: @ContractState) -> u256
-```
-
-* **Purpose**: Get the next game ID that will be assigned when creating a new game
-* **Returns**: The upcoming game ID as u256
-* **Benefits**: Allows frontend to predict and track game creation
-* **Usage**: Frontend can immediately set the correct game ID after calling `start_game`
-
-### `has_active_game`
-
-```rust
-fn has_active_game(self: @ContractState, player: ContractAddress) -> bool
-```
-
-* **Purpose**: Check if a player currently has an active game
-* **Returns**: Boolean indicating active game status
-* **Benefits**: Simple validation without loading full game state
-* **Usage**: Frontend can show appropriate UI (start game vs continue game)
-
-### `get_player_game_history`
-
-```rust
-fn get_player_game_history(self: @ContractState, player: ContractAddress) -> Array<u256>
-```
-
-* **Purpose**: Retrieve all game IDs associated with a specific player
-* **Returns**: Array of game IDs (both active and completed)
-* **Benefits**: Enables game history features and analytics
-* **Usage**: Frontend can display player's game history and statistics
-
-## Integration Benefits
-
-The addition of these functions transforms the frontend experience:
-
-**Before**: Frontend had to iterate through potentially hundreds of game IDs to find a player's active game, leading to:
-- Slow game loading times
-- Unreliable state discovery
-- Complex error handling
-- Poor user experience
-
-**After**: Frontend can directly query player-specific data, resulting in:
-- Instant game state loading
-- Reliable game ID tracking
-- Clean, simple code
-- Smooth user experience
+- **set_player_name**: Saves player name and adds player to leaderboard if new. Emits `PlayerNameSet`.
+- **start_game**: Validates player doesn't already have an active game, initializes game with random color order, stores both the game and target configurations, emits `GameStarted`.
+- **submit_result**: Accepts the final bottle arrangement and move count from the player, verifies the solution using `verify_completion`, awards 10 points and emits `GameCompleted` if correct, otherwise reverts.
+- **end_game**: Allows a player to end a game early, marks the game as inactive, emits `GameEnded` (with `was_completed: false`).
+- **get_game_state**: Returns player, current bottles, target, move count, and status for a given game ID.
+- **get_all_player_points**: Returns an array of `PlayerData` including address, name, points, and moves for all players.
+- **Frontend integration functions**: `get_player_active_game`, `get_next_game_id`, `has_active_game`, `get_player_game_history` provide instant access to player/game state for the frontend.
 
 ---
 
 ## Internal Functions
-
-### `is_player_registered`
-
-* Scans all players to see if one is already registered
-
-### `shuffle_colors`
-
-* Performs deterministic shuffling using seed and Pedersen hash
-
-### `remove_at_index`
-
-* Removes one element from an array
+- `is_player_registered`: Checks if a player is already registered.
+- `shuffle_colors`: Deterministically shuffles colors using Pedersen hash and a seed.
+- `remove_at_index`: Removes an element from an array.
+- `verify_completion`: Checks if the player's final bottle arrangement matches the target.
 
 ---
 
 ## Game Flow Summary
-
-1. Player registers with `set_player_name`
-2. Starts a game with `start_game`
-3. Makes moves via `make_move` to match colors
-4. Earns 10 points if all bottles are correct
-5. Can call `end_game` to quit manually
-6. View progress with `get_game_state` or leaderboard with `get_all_player_points`
+1. Player registers with `set_player_name` (emits `PlayerNameSet`).
+2. Starts a game with `start_game` (emits `GameStarted`).
+3. Swaps bottles off-chain, then submits the result with `submit_result`.
+4. If correct, earns 10 points and emits `GameCompleted`.
+5. Can call `end_game` to quit manually (emits `GameEnded`).
+6. View progress with `get_game_state` or leaderboard with `get_all_player_points`.
 
 ---
 
 ## Features Summary
-
-* 🎮 Interactive game logic with shuffling and matching
+* 🎮 Interactive game logic with shuffling, matching, and event tracking
 * 🔒 Upgradability via OpenZeppelin
-* 🧑‍🤝‍🧑 Leaderboard support
+* 🧑‍🤝‍🧑 Leaderboard with points and moves
 * 👑 Owner-only upgrade rights
 * ⚡ Optimized frontend integration functions
 * 🚀 Instant game state loading
+* 📊 Rich event data for analytics and off-chain tracking
+
 ---
 
 ## Example Gameplay
 
-*   Start Game → Random target is set (e.g., [Blue, Red, Purple, Green, Yellow]).
-*   Initial Setup → Bottles are shuffled (e.g., [Red, Blue, Green, Yellow, Purple]).
-*   Player Swaps:
-*   Swap Bottle 0 (Red) and Bottle 1 (Blue) → [Blue, Red, Green, Yellow, Purple] (now 2 correct).
-*   Continue swapping until the arrangement matches the target.
-*   Win Condition → When all bottles match, the game ends, and points are awarded.
+1. Player registers a name.
+2. Player starts a game; a random target and shuffled bottles are set.
+3. Player swaps bottles off-chain to match the target.
+4. Player submits the result with the final arrangement and move count.
+5. If correct, the contract awards points and emits a `GameCompleted` event.
+6. Player can view their points and history on the leaderboard.
+7. Player can end a game early with `end_game` (emits `GameEnded`).
+
