@@ -104,7 +104,7 @@
         "state_mutability": "external"
       },
       {
-        "name": "make_move",
+        "name": "submit_result",
         "type": "function",
         "inputs": [
           {
@@ -112,11 +112,11 @@
             "type": "core::integer::u256"
           },
           {
-            "name": "bottle_from",
-            "type": "core::integer::u8"
+            "name": "final_bottles",
+            "type": "core::array::Array::<contracts::types::Color>"
           },
           {
-            "name": "bottle_to",
+            "name": "moves",
             "type": "core::integer::u8"
           }
         ],
@@ -414,43 +414,6 @@
   },
   {
     "kind": "struct",
-    "name": "contracts::ColorStark::MoveMade",
-    "type": "event",
-    "members": [
-      {
-        "kind": "key",
-        "name": "player",
-        "type": "core::starknet::contract_address::ContractAddress"
-      },
-      {
-        "kind": "key",
-        "name": "game_id",
-        "type": "core::integer::u256"
-      },
-      {
-        "kind": "data",
-        "name": "bottle_from",
-        "type": "core::integer::u8"
-      },
-      {
-        "kind": "data",
-        "name": "bottle_to",
-        "type": "core::integer::u8"
-      },
-      {
-        "kind": "data",
-        "name": "moves",
-        "type": "core::integer::u8"
-      },
-      {
-        "kind": "data",
-        "name": "correct_bottles",
-        "type": "core::integer::u8"
-      }
-    ]
-  },
-  {
-    "kind": "struct",
     "name": "contracts::ColorStark::GameCompleted",
     "type": "event",
     "members": [
@@ -532,11 +495,6 @@
         "kind": "nested",
         "name": "GameStarted",
         "type": "contracts::ColorStark::GameStarted"
-      },
-      {
-        "kind": "nested",
-        "name": "MoveMade",
-        "type": "contracts::ColorStark::MoveMade"
       },
       {
         "kind": "nested",
