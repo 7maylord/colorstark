@@ -45,9 +45,13 @@ colorstark/
 │   │   ├── abi/
 │   │   ├── app/
 │   │   ├── components/
+│   │   ├── config/
 │   │   ├── hooks/
 │   │   └── utils/
-│   └── tsconfig.json
+│   ├── tailwind.config.js
+│   ├── tsconfig.json
+│   ├── package.json
+│   └── yarn.lock
 ├── .gitignore
 └── README.md
 ```
@@ -85,10 +89,10 @@ yarn install
 
 ### 3. Compile the Smart Contract
 
-Navigate to the contract directory and compile the Cairo contract using Scarb:
+Navigate to the contracts directory and compile the Cairo contract using Scarb:
 
 ```bash
-cd contracts
+cd ../contracts
 scarb build
 ```
 
@@ -143,7 +147,7 @@ sncast --url https://api.starknet.io/v0_7_1 deploy --class-hash <CLASS_HASH> --c
 Update the contract address in your `.env` file:
 
 ```
-NEXT_PUBLIC_CONTRACT_ADDRESS= 'YOUR_DEPLOYED_CONTRACT_ADDRESS'
+NEXT_PUBLIC_CONTRACT_ADDRESS='YOUR_DEPLOYED_CONTRACT_ADDRESS'
 ```
 
 ### 6. Update Contract ABI
@@ -191,11 +195,11 @@ yarn start
 ### Deploy to Hosting (e.g., Vercel)
 - Push the frontend directory to a Git repository.
 - Import into Vercel and deploy.
-- Set environment variables (e.g., `NEXT_PUBLIC_CONTRACT_ADDRESS`).
+- Set environment variables (e.g., `NEXT_PUBLIC_CONTRACT_ADDRESS`) in your Vercel dashboard.
 
 ## Testing
 
-- **Contract Testing**: Write tests in `contracts/src/tests/` using Starknet Foundry. Run tests with:
+- **Contract Testing**: Write tests in `contracts/tests/` using Starknet Foundry. Run tests with:
   ```bash
   cd contracts
   scarb test
@@ -206,7 +210,7 @@ yarn start
 
 - **Wallet Issues**: Ensure Argent X or Braavos is installed and set to the correct network. Check `window.starknet` in the browser console.
 - **Devnet Issues**: Ensure `starknet-devnet` is running (v0.2.4). Use Docker if local setup fails.
-
+- **Node/Scarb Issues**: Ensure you have the correct Node.js version and Scarb installed. If you encounter issues, check the official documentation for each tool.
 
 ## Features for Contributors
 
@@ -215,6 +219,13 @@ yarn start
 - **Improved UX**: Add animations for bottle swaps
 - **Leaderboard Optimization**: Use off-chain indexing (e.g., The Graph) for large-scale leaderboards.
 - **Mainnet Deployment**: Deploy to StarkNet mainnet after thorough testing.
+
+## Contributing
+
+Contributions are welcome! Please:
+- Use Prettier and ESLint for code formatting and linting.
+- Open issues or pull requests for bugs, features, or improvements.
+- Add frontend tests if possible (Jest, React Testing Library).
 
 ## Resources
 
