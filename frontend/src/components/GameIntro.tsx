@@ -3,10 +3,37 @@
 import { useAccount } from "@starknet-react/core";
 import WalletConnectButton from "./WalletConnectButton";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Contract, shortString } from "starknet";
+import colorStarkAbi from "../abi/color_stark.json";
 
 export default function GameIntro() {
-  const { address } = useAccount();
+  const { address, account } = useAccount();
   const walletConnected = !!address;
+  const [playerName, setPlayerName] = useState<string>("");
+  const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as string;
+
+  useEffect(() => {
+    const fetchName = async () => {
+      if (account && address && contractAddress) {
+        try {
+          const contract = new Contract(colorStarkAbi as any, contractAddress, account);
+          const nameFelt = await contract.call("get_player_name", [address]);
+          let name = "";
+          if (nameFelt && typeof nameFelt === "object" && "toString" in nameFelt) {
+            name = shortString.decodeShortString(nameFelt.toString());
+          } else if (typeof nameFelt === "string") {
+            name = shortString.decodeShortString(nameFelt);
+          }
+          setPlayerName(name);
+          if (name) localStorage.setItem("colorstark_player_name", name);
+        } catch (err) {
+          setPlayerName("");
+        }
+      }
+    };
+    fetchName();
+  }, [account, address, contractAddress]);
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-12 flex flex-col items-center">
@@ -32,6 +59,9 @@ export default function GameIntro() {
           </div>
         ) : (
           <div className="space-y-4 flex flex-col items-center">
+            {playerName && (
+              <div className="text-lg text-white font-semibold">Welcome, {playerName}!</div>
+            )}
             <Link href="/game">
               <button
                 className="

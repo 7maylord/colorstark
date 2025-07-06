@@ -3,6 +3,7 @@
 import { useAccount, useConnect, useDisconnect } from "@starknet-react/core";
 import { useStarknetkitConnectModal } from "starknetkit";
 import { useMemo, useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 // Utility for class names
 const classNames = (...classes: (string | undefined | null | false)[]): string => {
@@ -19,6 +20,7 @@ export default function WalletConnectButton() {
   const [justCopied, setJustCopied] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   // Copy address to clipboard
   const copyToClipboard = async () => {
@@ -51,6 +53,15 @@ export default function WalletConnectButton() {
     } finally {
       setIsConnecting(false);
     }
+  };
+
+ 
+  const handleDisconnect = () => {
+    disconnect();
+    localStorage.removeItem("colorstark_player_name");
+    localStorage.removeItem("colorstark_active_game_id");
+    setDropdownOpen(false);
+    router.push('/');
   };
 
   // Dropdown close on outside click
@@ -110,7 +121,7 @@ export default function WalletConnectButton() {
                 {address}
               </div>
               <button
-                onClick={() => { disconnect(); setDropdownOpen(false); }}
+                onClick={handleDisconnect}
                 className="flex items-center justify-center space-x-2 p-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-200 hover:text-white transition-all duration-300 hover:scale-105 active:scale-95"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -125,7 +136,7 @@ export default function WalletConnectButton() {
     );
   }
 
-  // Not connected: show connect button and modal
+ 
   return (
     <>
       <button
