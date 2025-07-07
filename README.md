@@ -2,6 +2,14 @@
 
 The ColorStark Game is a decentralized, on-chain game built on StarkNet, where players match colored bottles to a target configuration to earn points. Players connect their StarkNet wallet, set a display name, start a game, swap bottles off-chain to match the target, and submit their solution to compete on a global leaderboard. The game uses a Cairo smart contract for game logic and a Next.js frontend with TypeScript and Starknet-React for a seamless user experience.
 
+## Contract Deployment
+
+The ColorStark smart contract is deployed on:
+
+- **Network:** Sepolia Testnet
+- **Contract Address:** 0x0600ede956780c61a9db05e17404075f5f0d2fd75ec2e458d383afef09282b68
+
+
 ## Features
 
 - **Wallet Integration**: Connect with Argent X or Braavos to interact with the game on StarkNet.
@@ -131,13 +139,13 @@ export STARKNET_ACCOUNT=~/.starknet_accounts/starknet_open_zeppelin_accounts.jso
 export STARKNET_KEYSTORE=~/.starknet_accounts/starknet_open_zeppelin_key.json
 ```
 
-Declare and deploy:
+Declare and deploy: make sure you have a RPC url from alchemy or infura
 
 ```bash
 # Declare the contract, note the class hash returned
-sncast --url https://api.starknet.io/v0_7_1 declare --contract-name ColorStark
+sncast --url https://yourRPCURL declare --contract-name ColorStark
 # Deploy the contract (replace <CLASS_HASH> and <OWNER_ADDRESS> with your values) Note contract address returned
-sncast --url https://api.starknet.io/v0_7_1 deploy --class-hash <CLASS_HASH> --constructor-args <OWNER_ADDRESS>
+sncast --url https://yourRPCURL deploy --class-hash <CLASS_HASH> --constructor-args <OWNER_ADDRESS>
 ```
 
 - `<OWNER_ADDRESS>` should be the StarkNet address that will have admin/upgrade rights for the contract.
