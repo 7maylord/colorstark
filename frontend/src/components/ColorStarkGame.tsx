@@ -411,15 +411,19 @@ const ColorStarkGame = () => {
         </div>
         {/* Name Input (always show) */}
         <div className="max-w-md mx-auto mb-8">
-          <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-6 border border-white border-opacity-20">
+          <div className="bg-gradient-to-br from-white/10 via-purple-200/10 to-blue-200/10 backdrop-blur-xl rounded-2xl p-8 border border-white/30 shadow-xl">
             <div className="space-y-4">
-              <div className="flex gap-2">
+              <label className="flex items-center gap-2 text-lg font-semibold text-purple-200 mb-2">
+                <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                Player Name
+              </label>
+              <div className="flex gap-2 items-center">
                 <input
                   type="text"
                   value={tempName}
                   onChange={(e) => setTempName(e.target.value)}
                   placeholder="Enter your name"
-                  className="flex-1 px-3 py-2 bg-gray-100 bg-opacity-20 rounded-lg text-black placeholder-gray-400 border border-black border-opacity-20 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="flex-1 px-4 py-3 bg-white/70 bg-opacity-30 rounded-xl text-black placeholder-gray-400 border border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg shadow-inner transition-all duration-200"
                   disabled={!address || nameTxStatus === 'pending'}
                   maxLength={31}
                 />
@@ -442,22 +446,31 @@ const ColorStarkGame = () => {
                       setFetchError('Failed to set name on chain.');
                     }
                   }}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors disabled:opacity-50"
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 via-pink-500 to-blue-600 hover:from-purple-500 hover:via-pink-400 hover:to-blue-500 rounded-xl text-white font-bold text-lg shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-purple-400"
                   disabled={!address || nameTxStatus === 'pending' || !tempName.trim() || tempName.length > 31}
                 >
-                  {nameTxStatus === 'pending' ? 'Setting...' : 'Set'}
+                  {nameTxStatus === 'pending' ? (
+                    <span className="flex items-center gap-2"><svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" /><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" className="opacity-75" /></svg> Setting...</span>
+                  ) : 'Set'}
                 </button>
               </div>
               {tempName.length > 31 && (
-                <p className="text-red-400 text-sm">Name must be 31 characters or less.</p>
+                <p className="text-red-400 text-sm flex items-center gap-1"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg> Name must be 31 characters or less.</p>
               )}
-              {fetchError && <p className="text-red-400 text-sm">{fetchError}</p>}
-              {nameTxStatus === 'pending' && <p className="text-yellow-400 text-sm">Transaction pending...</p>}
-              {nameTxStatus === 'success' && <p className="text-green-400 text-sm">Name set on-chain!</p>}
-              {nameTxStatus === 'error' && <p className="text-red-400 text-sm">{nameTxError || 'Transaction failed'}</p>}
-              <div className="text-center">
-                <p className="text-lg text-black font-semibold">{playerName}</p>
-                <p className="text-sm text-gray-300">Points: {points}</p>
+              {fetchError && <p className="text-red-400 text-sm flex items-center gap-1"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg> {fetchError}</p>}
+              {nameTxStatus === 'pending' && <p className="text-yellow-400 text-sm flex items-center gap-1"><svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" /><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" className="opacity-75" /></svg> Transaction pending...</p>}
+              {nameTxStatus === 'success' && <p className="text-green-400 text-sm flex items-center gap-1"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Name set on-chain!</p>}
+              {nameTxStatus === 'error' && <p className="text-red-400 text-sm flex items-center gap-1"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg> {nameTxError || 'Transaction failed'}</p>}
+              <div className="text-center mt-2">
+                {playerName && (
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="flex items-center gap-2 justify-center">
+                      <span className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 flex items-center justify-center text-white font-bold text-lg shadow">{playerName[0]?.toUpperCase()}</span>
+                      <span className="text-lg text-white font-semibold">{playerName}</span>
+                    </div>
+                    <p className="text-sm text-gray-300">Points: {points}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

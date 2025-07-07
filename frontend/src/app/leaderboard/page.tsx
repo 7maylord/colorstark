@@ -120,7 +120,7 @@ export default function LeaderboardPage() {
                     (index === 0 ? 'bg-gradient-to-r from-yellow-600 to-orange-600 shadow-lg' : 
                       index === 1 ? 'bg-gradient-to-r from-gray-500 to-gray-600 shadow' :
                       index === 2 ? 'bg-gradient-to-r from-amber-700 to-orange-700 shadow' :
-                      'bg-white bg-opacity-10 hover:bg-gradient-to-r hover:from-purple-700/40 hover:to-blue-700/40') +
+                      'bg-gray-700 bg-opacity-10 hover:bg-gradient-to-r hover:from-purple-700/40 hover:to-blue-700/40') +
                     ' hover:scale-[1.025] hover:shadow-xl'
                   }
                 >

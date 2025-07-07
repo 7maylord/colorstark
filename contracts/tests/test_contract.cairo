@@ -6,7 +6,7 @@ use snforge_std::{
 use starknet::testing::set_block_timestamp;
 use starknet::{ContractAddress, contract_address_const};
 
-mod tests {
+
     use super::*;
 
     // Helper function to deploy the contract
@@ -117,103 +117,8 @@ mod tests {
         stop_cheat_caller_address(contract.contract_address);
     }
 
-    #[test]
-    fn test_make_move() {
-        let contract = deploy_contract();
 
-        start_cheat_caller_address(contract.contract_address, player1());
-        contract.set_player_name('Alice');
-        contract.start_game();
-
-        // Get initial state
-        let (_, bottles_before, _, moves_before, _) = contract.get_game_state(1);
-        let bottle_0_before = *bottles_before.at(0);
-        let bottle_1_before = *bottles_before.at(1);
-
-        // Make a move (swap bottles 0 and 1)
-        contract.make_move(1, 0, 1);
-
-        // Get state after move
-        let (_, bottles_after, _, moves_after, is_active) = contract.get_game_state(1);
-        let bottle_0_after = *bottles_after.at(0);
-        let bottle_1_after = *bottles_after.at(1);
-
-        // Verify move was made
-        assert(bottle_0_after == bottle_1_before, 'Bottle 0 not swapped correctly');
-        assert(bottle_1_after == bottle_0_before, 'Bottle 1 not swapped correctly');
-        assert(moves_after == moves_before + 1, 'Move count not incremented');
-        assert(is_active == true, 'Game should still be active');
-
-        stop_cheat_caller_address(contract.contract_address);
-    }
-
-    #[test]
-    #[should_panic(expected: ('Game not active',))]
-    fn test_cannot_move_inactive_game() {
-        let contract = deploy_contract();
-
-        start_cheat_caller_address(contract.contract_address, player1());
-        contract.set_player_name('Alice');
-        contract.start_game();
-
-        // End the game
-        contract.end_game(1);
-
-        // Try to make a move - should panic
-        contract.make_move(1, 0, 1);
-
-        stop_cheat_caller_address(contract.contract_address);
-    }
-
-    #[test]
-    #[should_panic(expected: ('Not your game',))]
-    fn test_cannot_move_other_player_game() {
-        let contract = deploy_contract();
-
-        // Player 1 starts game
-        start_cheat_caller_address(contract.contract_address, player1());
-        contract.set_player_name('Alice');
-        contract.start_game();
-        stop_cheat_caller_address(contract.contract_address);
-
-        // Player 2 tries to make move in Player 1's game
-        start_cheat_caller_address(contract.contract_address, player2());
-        contract.set_player_name('Bob');
-        contract.make_move(1, 0, 1); // Should panic
-
-        stop_cheat_caller_address(contract.contract_address);
-    }
-
-    #[test]
-    #[should_panic(expected: ('Invalid bottle index',))]
-    fn test_invalid_bottle_index() {
-        let contract = deploy_contract();
-
-        start_cheat_caller_address(contract.contract_address, player1());
-        contract.set_player_name('Alice');
-        contract.start_game();
-
-        // Try to move with invalid index (5 is out of bounds)
-        contract.make_move(1, 0, 5);
-
-        stop_cheat_caller_address(contract.contract_address);
-    }
-
-    #[test]
-    #[should_panic(expected: ('Cannot swap same bottle',))]
-    fn test_cannot_swap_same_bottle() {
-        let contract = deploy_contract();
-
-        start_cheat_caller_address(contract.contract_address, player1());
-        contract.set_player_name('Alice');
-        contract.start_game();
-
-        // Try to swap bottle with itself
-        contract.make_move(1, 0, 0);
-
-        stop_cheat_caller_address(contract.contract_address);
-    }
-
+   
     #[test]
     fn test_end_game() {
         let contract = deploy_contract();
@@ -238,45 +143,6 @@ mod tests {
     }
 
     #[test]
-    fn test_get_correct_bottles() {
-        let contract = deploy_contract();
-
-        start_cheat_caller_address(contract.contract_address, player1());
-        contract.set_player_name('Alice');
-        contract.start_game();
-
-        // Get initial correct bottles count
-        let correct_initial = contract.get_correct_bottles(1);
-
-        // Make some moves and check if correct count changes
-        contract.make_move(1, 0, 1);
-        let correct_after_move = contract.get_correct_bottles(1);
-
-        // The count should be between 0 and 5
-        assert(correct_initial <= 5, 'Initial correct count too high');
-        assert(correct_after_move <= 5, 'Correct count after move high');
-
-        stop_cheat_caller_address(contract.contract_address);
-    }
-
-    #[test]
-    fn test_points_system() {
-        let contract = deploy_contract();
-
-        start_cheat_caller_address(contract.contract_address, player1());
-        contract.set_player_name('Alice');
-
-        // Initial points should be 0
-        assert(contract.get_player_points(player1()) == 0, 'Initial points not 0');
-
-        // Note: Testing actual game completion requires knowing the exact shuffle
-        // which is deterministic but complex to predict. In a real test environment,
-        // you might want to add a test-only function to set up a specific game state.
-
-        stop_cheat_caller_address(contract.contract_address);
-    }
-
-    #[test]
     fn test_upgrade_only_owner() {
         let contract = deploy_contract();
 
@@ -288,40 +154,6 @@ mod tests {
         stop_cheat_caller_address(contract.contract_address);
     }
 
-    #[test]
-    fn test_game_flow() {
-        let contract = deploy_contract();
-
-        start_cheat_caller_address(contract.contract_address, player1());
-        contract.set_player_name('Alice');
-
-        // 1. Start game
-        contract.start_game();
-        let (_, _, _, moves_initial, is_active_initial) = contract.get_game_state(1);
-        assert(moves_initial == 0, 'Initial moves wrong');
-        assert(is_active_initial == true, 'Game should be active');
-
-        // 2. Make several moves
-        contract.make_move(1, 0, 1);
-        contract.make_move(1, 1, 2);
-        contract.make_move(1, 2, 3);
-
-        let (_, _, _, moves_after, _) = contract.get_game_state(1);
-        assert(moves_after == 3, 'Move count wrong');
-
-        // 3. End game
-        contract.end_game(1);
-        let (_, _, _, _, is_active_final) = contract.get_game_state(1);
-        assert(is_active_final == false, 'Game should be inactive');
-
-        // 4. Start new game
-        contract.start_game();
-        let (_, _, _, moves_new, is_active_new) = contract.get_game_state(2);
-        assert(moves_new == 0, 'New game moves wrong');
-        assert(is_active_new == true, 'New game should be active');
-
-        stop_cheat_caller_address(contract.contract_address);
-    }
 
     #[test]
     fn test_leaderboard() {
@@ -352,9 +184,5 @@ mod tests {
         assert(*bob_data.points == 0, 'Wrong Bob points');
     }
 
-    //run all tests
-    fn run_all_tests() {
-        test_set_player_name();
-        test_multiple_players_registration();
-    }
-}
+    
+

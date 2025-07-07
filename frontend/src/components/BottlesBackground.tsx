@@ -39,6 +39,26 @@ export default function BottlesBackground() {
           <div className="w-3 h-3 sm:w-4 sm:h-4 bg-cyan-300 rounded-full mx-auto mt-1 opacity-90"></div>
         </div>
       </div>
+      <div className="absolute top-12 sm:top-28 left-1/2 bounce-bottle-2">
+        <div className="w-3 h-8 sm:w-5 sm:h-14 bg-gradient-to-b from-orange-400 to-orange-600 rounded-t-full rounded-b-lg opacity-70 shadow-2xl ring-2 ring-white">
+          <div className="w-2 h-2 sm:w-3 sm:h-3 bg-orange-300 rounded-full mx-auto mt-1 opacity-90"></div>
+        </div>
+      </div>
+      <div className="absolute bottom-12 sm:bottom-28 right-1/2 bounce-bottle-3">
+        <div className="w-4 h-10 sm:w-6 sm:h-16 bg-gradient-to-b from-lime-400 to-lime-600 rounded-t-full rounded-b-lg opacity-70 shadow-2xl ring-2 ring-white">
+          <div className="w-3 h-3 sm:w-4 sm:h-4 bg-lime-300 rounded-full mx-auto mt-1 opacity-90"></div>
+        </div>
+      </div>
+      <div className="absolute top-2/3 left-1/3 bounce-bottle-1">
+        <div className="w-3 h-7 sm:w-5 sm:h-13 bg-gradient-to-b from-emerald-400 to-emerald-600 rounded-t-full rounded-b-lg opacity-70 shadow-2xl ring-2 ring-white">
+          <div className="w-2 h-2 sm:w-3 sm:h-3 bg-emerald-300 rounded-full mx-auto mt-1 opacity-90"></div>
+        </div>
+      </div>
+      <div className="absolute top-2/3 right-1/3 bounce-bottle-2">
+        <div className="w-4 h-9 sm:w-6 sm:h-15 bg-gradient-to-b from-fuchsia-400 to-fuchsia-600 rounded-t-full rounded-b-lg opacity-70 shadow-2xl ring-2 ring-white">
+          <div className="w-3 h-3 sm:w-4 sm:h-4 bg-fuchsia-300 rounded-full mx-auto mt-1 opacity-90"></div>
+        </div>
+      </div>
       {/* Particle Effects */}
       <div className="absolute inset-0">
         <div className="absolute top-1/4 left-1/4 w-1 h-1 bg-white rounded-full opacity-30 animate-twinkle"></div>

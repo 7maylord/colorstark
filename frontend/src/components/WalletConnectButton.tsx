@@ -144,14 +144,14 @@ export default function WalletConnectButton() {
     <>
       <button
         onClick={() => setIsModalOpen(true)}
-        className="relative px-6 py-2.5 rounded-xl font-medium text-sm bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-500 hover:via-pink-500 hover:to-blue-500 text-white shadow-lg hover:shadow-purple-500/25 border border-white/20 hover:border-white/30 backdrop-blur-sm transition-all duration-300 hover:scale-105 active:scale-95 flex items-center space-x-2 group overflow-hidden
+        className="relative px-6 py-2.5 rounded-xl font-medium text-sm bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-500 hover:via-pink-500 hover:to-blue-500 text-white shadow-lg hover:shadow-purple-500/25 border border-white/20 hover:border-white/30 backdrop-blur-sm transition-all duration-300 hover:scale-105 active:scale-95 flex items-center justify-center space-x-2 group overflow-hidden
         sm:px-6 sm:py-2.5
         px-3 py-2 text-xs min-w-0 max-w-full w-full sm:w-auto"
       >
         <svg className="relative z-10 w-5 h-5 sm:w-5 sm:h-5 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
         </svg>
-        <span className="relative z-10 truncate max-w-[90px] sm:max-w-none">Connect Wallet</span>
+        <span className="relative z-10 truncate max-w-[90px] sm:max-w-none text-center">Connect Wallet</span>
       </button>
       {isModalOpen && (
         <div 
