@@ -38,15 +38,11 @@ export default function GameIntro() {
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-12 flex flex-col items-center">
       {/* Game Logo/Title */}
-      <div className="mb-4 animate-fade-in">
-        <div className="flex items-center justify-center gap-6 mb-6">
-          <h1 className="text-6xl md:text-8xl font-black bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 bg-clip-text text-transparent tracking-tight">
-            COLOR
-          </h1>
-          <div className="w-32 h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-pulse transform rotate-52 mx-2"></div>
-          <h1 className="text-6xl md:text-8xl font-black bg-gradient-to-r from-blue-400 via-teal-500 to-green-500 bg-clip-text text-transparent tracking-tight">
-            STARK
-          </h1>
+      <div className="mb-4 animate-fade-in w-full">
+        <div className="flex flex-wrap items-center justify-center mb-6 w-full">
+          <h1 className="text-4xl xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 bg-clip-text text-transparent tracking-tight break-words text-center flex-1 min-w-[120px]">COLOR</h1>
+          <div className="w-4 h-1 sm:w-8 sm:h-1 md:w-16 md:h-1 lg:w-32 lg:h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-pulse transform rotate-[52deg] transition-all duration-300"></div>
+          <h1 className="text-4xl xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black bg-gradient-to-r from-blue-400 via-teal-500 to-green-500 bg-clip-text text-transparent tracking-tight break-words text-center flex-1 min-w-[120px]">STARK</h1>
         </div>
       </div>
 

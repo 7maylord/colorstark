@@ -9,6 +9,7 @@ import { useGameCompletedListener } from '../hooks/useGameCompletedListener';
 import { useTargetRevealLockout } from "../hooks/useTargetRevealLockout";
 import Bottle from "./Bottle";
 import CongratsMessage from "./CongratsMessage";
+import InstructionsModal from "./InstructionsModal";
 
 const colorMap = {
   Red: 'bg-red-500',
@@ -57,6 +58,7 @@ const ColorStarkGame = () => {
   const [target, setTarget] = useState<BottleColor[]>([]);
   const [moves, setMoves] = useState<number>(0);
   const [gameActive, setGameActive] = useState<boolean>(false);
+  const [showInstructions, setShowInstructions] = useState(true);
 
   // Helper function to parse Color enum from contract
   function parseColor(colorObj: any): BottleColor {
@@ -389,17 +391,23 @@ const ColorStarkGame = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white relative overflow-hidden">
+      {showInstructions && (
+        <InstructionsModal open={showInstructions} onClose={() => setShowInstructions(false)} />
+      )}
       {showCongrats && (
         <CongratsMessage points={10} />
       )}
       <BottlesBackground />
       <div className="container mx-auto px-4 py-8 relative z-10">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-            ColorStark
-          </h1>
-          <p className="text-xl text-gray-300">Match the colors, earn the points!</p>
+        <div className="flex flex-col items-center justify-center mb-12">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <h1 className="text-4xl sm:text-6xl font-black bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-500 bg-clip-text text-transparent tracking-tight">Color</h1>
+            <h1 className="text-4xl sm:text-6xl font-black bg-gradient-to-r from-blue-400 via-teal-400 to-green-400 bg-clip-text text-transparent tracking-tight">Stark</h1>
+            {/* Sparkle icon */}
+            <span className="ml-2 animate-pulse text-yellow-300 text-2xl sm:text-3xl">✨</span>
+          </div>
+          <p className="text-lg sm:text-xl text-gray-300 text-center">Match the colors, earn the points!</p>
         </div>
         {/* Name Input (always show) */}
         <div className="max-w-md mx-auto mb-8">
