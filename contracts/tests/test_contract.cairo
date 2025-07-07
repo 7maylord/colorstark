@@ -1,9 +1,9 @@
 use contracts::{IColorStarkDispatcher, IColorStarkDispatcherTrait};
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_caller_address,
-    stop_cheat_caller_address,
+    stop_cheat_caller_address, start_cheat_block_timestamp, stop_cheat_block_timestamp, get_class_hash
 };
-use starknet::testing::set_block_timestamp;
+
 use starknet::{ClassHash, ContractAddress};
 use super::*;
 
@@ -76,13 +76,13 @@ fn test_multiple_players_registration() {
 #[test]
 fn test_start_game() {
     let contract = deploy_contract();
-
+    let timestamp: u64 = 1000;
     // Set player name first
     start_cheat_caller_address(contract.contract_address, player1());
     contract.set_player_name('Cece');
 
     // Set a specific timestamp for deterministic testing
-    set_block_timestamp(12345);
+    start_cheat_block_timestamp(contract.contract_address, timestamp);
 
     // Start game
     contract.start_game();
@@ -98,6 +98,7 @@ fn test_start_game() {
     assert(is_active == true, 'Game should be active');
 
     stop_cheat_caller_address(contract.contract_address);
+    stop_cheat_block_timestamp(contract.contract_address);
 }
 
 #[test]
@@ -240,8 +241,11 @@ fn test_upgrade_only_owner() {
     let contract = deploy_contract();
     start_cheat_caller_address(contract.contract_address, owner());
 
-    let new_class_hash: ClassHash = 0x1.try_into().unwrap();
-    contract.upgrade(new_class_hash);
+    let new_contract = declare("ColorStark").unwrap().contract_class();
+    let new_class_hash = new_contract.class_hash;
+    contract.upgrade(*new_class_hash);
     stop_cheat_caller_address(contract.contract_address);
+
+    assert(get_class_hash(contract.contract_address) == *new_class_hash, 'upgrade failed');
 }
 
