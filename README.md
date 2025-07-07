@@ -8,6 +8,7 @@ The ColorStark smart contract is deployed on:
 
 - **Network:** Sepolia Testnet
 - **Contract Address:** 0x0600ede956780c61a9db05e17404075f5f0d2fd75ec2e458d383afef09282b68
+- **Starkscan:** [View on Starkscan](https://sepolia.starkscan.co/contract/0x0600ede956780c61a9db05e17404075f5f0d2fd75ec2e458d383afef09282b68)
 
 
 ## Features
